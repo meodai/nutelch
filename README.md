@@ -42,36 +42,48 @@ npm install nutelch
 ## Usage
 
 ```js
-import { cusp, relch, toLab } from 'nutelch';
+import { cusp, relch, toLab, oklchSrgb, lchP3 } from 'nutelch';
 
-// Max in-gamut chroma at L=0.6, H=30 (OKLCH, sRGB) — the shell point:
-cusp({ l: 0.6, h: 30 });
+// You pass the gamut LUT you want; it carries the space (mode) + lightness range.
+// Import only the ones you use — the rest are tree-shaken away.
+
+// Max in-gamut chroma at L=0.6, H=30 in OKLCH/sRGB — the shell point:
+cusp({ lut: oklchSrgb, l: 0.6, h: 30 });
 // → { mode: 'oklch', l: 0.6, c: 0.12…, h: 30 }
 
 // Chroma as a fraction of the way to the shell:
-relch({ l: 0.6, relC: 0.5, h: 30 });
+relch({ lut: oklchSrgb, l: 0.6, relC: 0.5, h: 30 });
 // → { mode: 'oklch', l: 0.6, c: 0.06…, h: 30 }  (half the max chroma)
 
-// LCH (CIE) — L on 0..100; display-p3 gamut:
-relch({ mode: 'lch', l: 60, relC: 1, h: 30, gamut: 'display-p3' });
+// A different space + gamut is just a different LUT. LCH (CIE) uses L on 0..100:
+relch({ lut: lchP3, l: 60, relC: 1, h: 30 });
 // → { mode: 'lch', l: 60, c: …, h: 30 }
 
 // Need rectangular a/b (for oklab()/lab() output)? Convert the result:
-toLab(relch({ l: 0.6, relC: 1, h: 30 }));
+toLab(relch({ lut: oklchSrgb, l: 0.6, relC: 1, h: 30 }));
 // → { l: 0.6, a: …, b: … }
 ```
 
 ### API
 
-- `cusp({ mode?, l, h, gamut? })` → the color on the shell at `(l, h)`. `.c` is the raw
-  max in-gamut chroma.
-- `relch({ mode?, l, relC, h, gamut? })` → resolves `relC` (0..1 of the way to the shell;
-  overshoot allowed) to an absolute color.
+- `cusp({ lut, l, h })` → the color on the shell at `(l, h)`. `.c` is the raw max in-gamut
+  chroma.
+- `relch({ lut, l, relC, h })` → resolves `relC` (0..1 of the way to the shell; overshoot
+  allowed) to an absolute color.
 - `toLab({ l, c, h })` → `{ l, a, b }` — rectangular conversion for `oklab()`/`lab()` output.
 
-Defaults: `mode: 'oklch'`, `gamut: 'srgb'`. Modes: `oklch`, `lch` (the two cusp-native
-cylindrical CSS spaces). Gamuts: `srgb`, `display-p3`. Input is always cylindrical
-(`l`, `h`, `relC`).
+The returned `mode` and the lightness range come from the LUT you pass. The available
+LUTs are named `<space><Gamut>`:
+
+| LUT          | space   | gamut        | L range |
+| ------------ | ------- | ------------ | ------- |
+| `oklchSrgb`  | `oklch` | `srgb`       | 0..1    |
+| `oklchP3`    | `oklch` | `display-p3` | 0..1    |
+| `lchSrgb`    | `lch`   | `srgb`       | 0..100  |
+| `lchP3`      | `lch`   | `display-p3` | 0..100  |
+
+Import only the LUTs you need (each is tree-shakeable; the package is side-effect-free).
+Input is always cylindrical (`l`, `h`, `relC`); `H` is `0..360` and wraps.
 
 ### Curves / easing
 
@@ -80,13 +92,13 @@ Easing is a 1-D remap of an input, so apply your own (or any easing library) to 
 axis you want, before the call:
 
 ```js
-import { relch } from 'nutelch';
+import { relch, oklchSrgb } from 'nutelch';
 const easeIn = (x) => x * x;
 
 // curve the saturation response:
-relch({ l: 0.7, relC: easeIn(0.5), h: 30 });
+relch({ lut: oklchSrgb, l: 0.7, relC: easeIn(0.5), h: 30 });
 // curve lightness (e.g. toward an HSL-like ramp):
-relch({ l: easeIn(0.7), relC: 1, h: 30 });
+relch({ lut: oklchSrgb, l: easeIn(0.7), relC: 1, h: 30 });
 ```
 
 A well-behaved ease maps `0→0` and `1→1`, so `relC: 1` still lands exactly on the shell.
@@ -97,6 +109,6 @@ A well-behaved ease maps `0→0` and `1→1`, so `relC: 1` still lands exactly o
 npm install
 npm run build:luts   # regenerate LUTs from culori
 npm test
-npm run dev          # interactive cusp explorer (compares LUT vs actual vs OkHSV)
+npm run dev          # interactive cusp explorer (compares LUT vs actual vs OkHSL)
 npm run build:lib    # publishable dist/
 ```
