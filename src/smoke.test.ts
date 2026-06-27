@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { VERSION } from './index';
+import { cusp } from './index';
 
 describe('scaffold', () => {
-  it('exports a version string', () => {
-    expect(typeof VERSION).toBe('string');
+  it('exports cusp as a function', () => {
+    expect(typeof cusp).toBe('function');
   });
 });
