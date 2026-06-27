@@ -7,6 +7,32 @@ nutelch lets you say "halfway to the boundary" (`relC: 0.5`) at any lightness an
 Dependency-free at runtime: gamut boundaries are precomputed into compact LUTs
 (culori is a build-time dependency only) and looked up with bilinear interpolation.
 
+## Where it sits: between OKLCH and OkHSL
+
+nutelch borrows **one** idea from OkHSL — chroma measured as a fraction of the
+per-lightness gamut shell — and keeps **everything else** from OKLCH:
+
+|                  | OKLCH                | **nutelch**                               | OkHSL                              |
+| ---------------- | -------------------- | ----------------------------------------- | ---------------------------------- |
+| **Chroma**       | absolute `C` (gamut-blind) | **`relC` × cusp — boundary-relative, _linear_** | `s` — boundary-relative, _curved_ (C₀/C_mid/C_max) |
+| **Lightness**    | raw OKLab `L`        | **raw OKLab `L`**                          | toe-remapped                       |
+| **Hue**          | raw `H`              | **raw `H`**                               | raw `H`                            |
+| **Output**       | CSS `oklch()`        | **CSS `oklch()`**                         | needs conversion                   |
+| **Out of gamut** | allowed              | **allowed (overshoot)**                   | clamped to `[0, 1]`                |
+
+So nutelch is **OKLCH with exactly one OkHSL property grafted on**: "saturation"
+that means the same thing at every L and H, and never *accidentally* lands out of
+gamut — without OkHSL's other opinions (the lightness toe, the nonlinear
+saturation curve, the picker geometry).
+
+Two consequences:
+
+1. **It's OKLCH-native.** A nutelch result _is_ an `oklch(l c h)` color — hand it
+   straight to CSS. OkHSL is its own space you must convert out of.
+2. **It's the linear midpoint, and you can slide either way.** Default `relC` is
+   linear; add an [`ease`](#curves--easing) to move toward OkHSL's curved feel,
+   or use [`cusp()`](#api) with absolute chroma to fall back to plain OKLCH.
+
 ## Install
 
 ```bash
