@@ -6,30 +6,27 @@ import {
   type SelectSpec,
 } from './controls';
 import { renderSlice } from './slice';
-import { actualMaxChroma, okhsvBoundary, okhsvHex, okhsvCoords } from './actual';
+import { actualMaxChroma, okhslBoundary, okhslHex, okhslCoords } from './actual';
 
 type Family = 'ok' | 'cie';
 
 const MODES: Mode[] = ['oklch', 'lch'];
 const familyOf = (m: Mode): Family => (m === 'oklch' ? 'ok' : 'cie');
 const lMaxOf = (fam: Family) => (fam === 'ok' ? 1 : 100);
+// CSS percentage reference for chroma: oklch 100% = 0.4, lch 100% = 150.
+const PCT_REF = (fam: Family) => (fam === 'ok' ? 0.4 : 150);
 
 const root = document.documentElement;
 const controlsHost = document.getElementById('controls')!;
 const sliceHost = document.getElementById('slice')!;
 const readoutHost = document.getElementById('readout')!;
+const swOkhsl = document.getElementById('sw-okhsl')!;
 const swNut = document.getElementById('sw-nut')!;
-const swOkhsv = document.getElementById('sw-okhsv')!;
-const swActual = document.getElementById('sw-actual')!;
+const swPct = document.getElementById('sw-pct')!;
+const cvOkhsl = swOkhsl.querySelector('.cv')!;
 const cvNut = swNut.querySelector('.cv')!;
-const cvOkhsv = swOkhsv.querySelector('.cv')!;
-const cvActual = swActual.querySelector('.cv')!;
-
-// Compact L·C·H readout in the active family's scale.
-const compact = (fam: Family, t: number, c: number, h: number) =>
-  fam === 'ok'
-    ? `${t.toFixed(3)} ${c.toFixed(3)} ${Math.round(h)}°`
-    : `${Math.round(t * 100)} ${Math.round(c)} ${Math.round(h)}°`;
+const cvPct = swPct.querySelector('.cv')!;
+const bnPct = swPct.querySelector('.bn')!;
 
 let family: Family = 'ok';
 let lMax = 1;
@@ -55,6 +52,12 @@ const css = (fam: Family, t: number, c: number, h: number) =>
     : `lch(${(t * 100).toFixed(2)}% ${c.toFixed(3)} ${h})`;
 
 const fmtComp = (fam: Family, v: number) => (fam === 'ok' ? v.toFixed(4) : v.toFixed(2));
+
+// Compact L·C·H readout in the active family's scale.
+const compact = (fam: Family, t: number, c: number, h: number) =>
+  fam === 'ok'
+    ? `${t.toFixed(3)} ${c.toFixed(3)} ${Math.round(h)}°`
+    : `${Math.round(t * 100)} ${Math.round(c)} ${Math.round(h)}°`;
 
 function renderReadout(
   col: { mode: Mode; l: number; c: number; h: number },
@@ -93,24 +96,28 @@ function render(v: ControlValues): void {
 
   const col = relch({ mode, l: lNative, relC, h, gamut });
   const peakC = cusp({ mode, l: lNative, h, gamut }).c;
-  const actualC = relC * actualMaxChroma(fam, lNative, h, gamut);
 
+  // nutColor (center): relC relative to the cusp.
   const cssNut = css(fam, t, col.c, h);
-  const cssActual = css(fam, t, actualC, h);
-  const hexOkhsv = okhsvHex(h, Math.min(relC, 1), t);
-  const okhsv = okhsvCoords(fam, h, Math.min(relC, 1), t);
+  // raw percentage: chroma as an absolute fraction of the CSS reference (ignores the cusp).
+  const cPct = relC * PCT_REF(fam);
+  const cssPct = css(fam, t, cPct, h);
+  // OkHSL: per-lightness saturation, the same idea as relC.
+  const okhsl = okhslCoords(fam, h, Math.min(relC, 1), t);
+  const hexOkhsl = okhslHex(h, Math.min(relC, 1), t);
 
   // Theme the page with nutColor's live color.
   root.style.setProperty('--live', cssNut);
   root.style.setProperty('--live-hue', String(h));
 
   swNut.style.background = cssNut;
-  swActual.style.background = cssActual;
-  swOkhsv.style.background = hexOkhsv;
+  swPct.style.background = cssPct;
+  swOkhsl.style.background = hexOkhsl;
 
   cvNut.textContent = compact(fam, t, col.c, h);
-  cvActual.textContent = compact(fam, t, actualC, h);
-  cvOkhsv.textContent = compact(fam, okhsv.t, okhsv.c, okhsv.h);
+  cvPct.textContent = compact(fam, t, cPct, h);
+  cvOkhsl.textContent = compact(fam, okhsl.t, okhsl.c, okhsl.h);
+  bnPct.textContent = fam === 'ok' ? 'oklch %' : 'lch %';
 
   renderReadout(col, cssNut, fam, relC, peakC);
 
@@ -120,9 +127,9 @@ function render(v: ControlValues): void {
     cssColor: (tt, c) => css(fam, tt, c, h),
     lutEnvelope: (tt) => cusp({ mode, l: tt * lMaxOf(fam), h, gamut }).c,
     actualEnvelope: (tt) => actualMaxChroma(fam, tt * lMaxOf(fam), h, gamut),
-    // OkHSV is an sRGB + OK model — only meaningful to overlay on the OK/sRGB slice.
-    okhsvCurve: fam === 'ok' && gamut === 'srgb' ? okhsvBoundary(h) : null,
-    cmax: Math.max(peakC, col.c, actualC, lMaxOf(fam) === 1 ? 0.05 : 5) * 1.15,
+    // OkHSL is an sRGB + OK model — only meaningful to overlay on the OK/sRGB slice.
+    okhslCurve: fam === 'ok' && gamut === 'srgb' ? okhslBoundary(h) : null,
+    cmax: Math.max(peakC, col.c, cPct, lMaxOf(fam) === 1 ? 0.05 : 5) * 1.15,
     point: { l: t, c: col.c },
     showActual,
   });

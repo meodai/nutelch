@@ -17,36 +17,37 @@ export function actualMaxChroma(family: 'ok' | 'cie', l: number, h: number, gamu
   return (clamped as { c?: number }).c ?? 0;
 }
 
-// OkHSV (Ottosson) is an sRGB + OKLab model. Sweeping its s=1 edge traces
-// OkHSV's *analytic* approximation of the sRGB gamut boundary in the OKLCH
-// L×C plane — useful to overlay against nutColor's LUT and the true gamut.
-export function okhsvBoundary(h: number, steps = 72): Array<[number, number]> {
+// OkHSL (Ottosson) is an sRGB + OKLab model whose saturation is normalized to
+// the per-lightness gamut boundary — the same idea as nutColor's relC. Its s=1
+// edge traces OkHSL's analytic sRGB boundary in the OKLCH L×C plane, so it
+// should nearly coincide with nutColor's LUT boundary.
+export function okhslBoundary(h: number, steps = 72): Array<[number, number]> {
   const pts: Array<[number, number]> = [];
   for (let i = 0; i <= steps; i++) {
-    const v = i / steps;
-    const c = toOklch({ mode: 'okhsv', h, s: 1, v } as never) as { l?: number; c?: number };
+    const l = i / steps;
+    const c = toOklch({ mode: 'okhsl', h, s: 1, l } as never) as { l?: number; c?: number };
     pts.push([c.l ?? 0, c.c ?? 0]);
   }
   return pts;
 }
 
-// The sRGB color OkHSV produces for the given knobs, for the comparison swatch.
-export function okhsvHex(h: number, s: number, v: number): string {
-  return formatHex({ mode: 'okhsv', h, s, v } as never) ?? '#000';
+// The sRGB color OkHSL produces for the given knobs, for the comparison swatch.
+export function okhslHex(h: number, s: number, l: number): string {
+  return formatHex({ mode: 'okhsl', h, s, l } as never) ?? '#000';
 }
 
-// OkHSV's color expressed in the active family's coordinates, so its value reads
-// on the same scale as nutColor's / the actual color. `t` is normalized L (0..1).
-export function okhsvCoords(
+// OkHSL's color expressed in the active family's coordinates, so its value reads
+// on the same scale as nutColor's. `t` is normalized L (0..1).
+export function okhslCoords(
   family: 'ok' | 'cie',
   h: number,
   s: number,
-  v: number,
+  l: number,
 ): { t: number; c: number; h: number } {
   if (family === 'ok') {
-    const o = toOklch({ mode: 'okhsv', h, s, v } as never) as { l?: number; c?: number; h?: number };
+    const o = toOklch({ mode: 'okhsl', h, s, l } as never) as { l?: number; c?: number; h?: number };
     return { t: o.l ?? 0, c: o.c ?? 0, h: o.h ?? h };
   }
-  const o = toLch({ mode: 'okhsv', h, s, v } as never) as { l?: number; c?: number; h?: number };
+  const o = toLch({ mode: 'okhsl', h, s, l } as never) as { l?: number; c?: number; h?: number };
   return { t: (o.l ?? 0) / 100, c: o.c ?? 0, h: o.h ?? h };
 }
