@@ -239,14 +239,27 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 0.25rem 0.4rem;
-  font-size: 0.62rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.3rem 0.4rem;
   color: var(--ink);
-  background: oklch(0.16 0.012 70 / 0.7);
+  background: oklch(0.16 0.012 70 / 0.72);
   backdrop-filter: blur(2px);
   text-align: center;
+}
+
+.swatch__cell small b {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.swatch__cell small .cv {
+  font-size: 0.64rem;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
 }
 
 .readout {

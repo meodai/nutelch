@@ -6,7 +6,7 @@ import {
   type SelectSpec,
 } from './controls';
 import { renderSlice } from './slice';
-import { actualMaxChroma, okhsvBoundary, okhsvHex } from './actual';
+import { actualMaxChroma, okhsvBoundary, okhsvHex, okhsvCoords } from './actual';
 
 type Family = 'ok' | 'cie';
 
@@ -21,6 +21,15 @@ const readoutHost = document.getElementById('readout')!;
 const swNut = document.getElementById('sw-nut')!;
 const swOkhsv = document.getElementById('sw-okhsv')!;
 const swActual = document.getElementById('sw-actual')!;
+const cvNut = swNut.querySelector('.cv')!;
+const cvOkhsv = swOkhsv.querySelector('.cv')!;
+const cvActual = swActual.querySelector('.cv')!;
+
+// Compact L·C·H readout in the active family's scale.
+const compact = (fam: Family, t: number, c: number, h: number) =>
+  fam === 'ok'
+    ? `${t.toFixed(3)} ${c.toFixed(3)} ${Math.round(h)}°`
+    : `${Math.round(t * 100)} ${Math.round(c)} ${Math.round(h)}°`;
 
 let family: Family = 'ok';
 let lMax = 1;
@@ -89,6 +98,7 @@ function render(v: ControlValues): void {
   const cssNut = css(fam, t, col.c, h);
   const cssActual = css(fam, t, actualC, h);
   const hexOkhsv = okhsvHex(h, Math.min(relC, 1), t);
+  const okhsv = okhsvCoords(fam, h, Math.min(relC, 1), t);
 
   // Theme the page with nutColor's live color.
   root.style.setProperty('--live', cssNut);
@@ -97,6 +107,10 @@ function render(v: ControlValues): void {
   swNut.style.background = cssNut;
   swActual.style.background = cssActual;
   swOkhsv.style.background = hexOkhsv;
+
+  cvNut.textContent = compact(fam, t, col.c, h);
+  cvActual.textContent = compact(fam, t, actualC, h);
+  cvOkhsv.textContent = compact(fam, okhsv.t, okhsv.c, okhsv.h);
 
   renderReadout(col, cssNut, fam, relC, peakC);
 

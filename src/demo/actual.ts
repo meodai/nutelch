@@ -8,6 +8,7 @@ const CFG = {
 };
 
 const toOklch = converter('oklch');
+const toLch = converter('lch');
 
 // Ground-truth boundary chroma computed live with culori (demo only).
 export function actualMaxChroma(family: 'ok' | 'cie', l: number, h: number, gamut: Gamut): number {
@@ -32,4 +33,20 @@ export function okhsvBoundary(h: number, steps = 72): Array<[number, number]> {
 // The sRGB color OkHSV produces for the given knobs, for the comparison swatch.
 export function okhsvHex(h: number, s: number, v: number): string {
   return formatHex({ mode: 'okhsv', h, s, v } as never) ?? '#000';
+}
+
+// OkHSV's color expressed in the active family's coordinates, so its value reads
+// on the same scale as nutColor's / the actual color. `t` is normalized L (0..1).
+export function okhsvCoords(
+  family: 'ok' | 'cie',
+  h: number,
+  s: number,
+  v: number,
+): { t: number; c: number; h: number } {
+  if (family === 'ok') {
+    const o = toOklch({ mode: 'okhsv', h, s, v } as never) as { l?: number; c?: number; h?: number };
+    return { t: o.l ?? 0, c: o.c ?? 0, h: o.h ?? h };
+  }
+  const o = toLch({ mode: 'okhsv', h, s, v } as never) as { l?: number; c?: number; h?: number };
+  return { t: (o.l ?? 0) / 100, c: o.c ?? 0, h: o.h ?? h };
 }
