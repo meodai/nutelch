@@ -172,6 +172,7 @@ function render(v: ControlValues): void {
     okhslCurve: fam === 'ok' && gamut === 'srgb' ? okhslBoundary(h) : null,
     cmax: Math.max(peakC, col.c, cPct, lMaxOf(fam) === 1 ? 0.05 : 5) * 1.15,
     point: { l: t, c: col.c },
+    pctPoint: { l: t, c: cPct },
     showActual,
   });
 }

@@ -11,7 +11,8 @@ export interface SliceInput {
   actualEnvelope: (t: number) => number; // culori live boundary, same t
   okhslCurve?: Array<[number, number]> | null; // OkHSL boundary as [normalized L, chroma] points
   cmax: number; // x-axis max chroma for scaling
-  point: SlicePoint | null; // current resolved point
+  point: SlicePoint | null; // nutColor's resolved point
+  pctPoint?: SlicePoint | null; // the raw oklch%/lch% point, for comparison
   showActual: boolean; // overlay the actual (culori) envelope
 }
 
@@ -33,7 +34,7 @@ function niceStep(max: number): number {
 }
 
 export function renderSlice(host: HTMLElement, input: SliceInput): void {
-  const { hue, lMax, cssColor, lutEnvelope, actualEnvelope, okhslCurve, cmax, point, showActual } =
+  const { hue, lMax, cssColor, lutEnvelope, actualEnvelope, okhslCurve, cmax, point, pctPoint, showActual } =
     input;
   const Y = (t: number) => PAD.t + (1 - t) * PLOT_H;
   const X = (c: number) => PAD.l + (cmax > 0 ? c / cmax : 0) * PLOT_W;
@@ -119,7 +120,19 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
     cTicks += `<text class="tick" x="${f(X(c))}" y="${H - PAD.b + 17}" text-anchor="middle">${lab}</text>`;
   }
 
-  // Current point with crosshair guides.
+  // The raw oklch%/lch% point — an outlined square. When its chroma exceeds the
+  // shell at its lightness it's out of gamut, so flag it (and it sits right of
+  // the boundary envelope, making the overshoot visible).
+  let pctMarker = '';
+  if (pctPoint) {
+    const px = X(pctPoint.c);
+    const py = Y(pctPoint.l);
+    const oog = pctPoint.c > lutEnvelope(pctPoint.l) + 1e-9;
+    const s = 4.5;
+    pctMarker = `<rect class="dot-pct${oog ? ' is-oog' : ''}" x="${f(px - s)}" y="${f(py - s)}" width="${f(2 * s)}" height="${f(2 * s)}"/>`;
+  }
+
+  // nutColor's current point with crosshair guides.
   let marker = '';
   if (point) {
     const px = X(point.c);
@@ -141,6 +154,7 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
       ${actLine}
       ${okhslLine}
       ${cuspMark}
+      ${pctMarker}
       ${marker}
       ${cTicks}
       <text class="axis" x="16" y="${f(PAD.t + PLOT_H / 2)}"

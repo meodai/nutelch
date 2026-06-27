@@ -202,6 +202,18 @@ body {
   stroke-width: 1.5;
 }
 
+/* raw oklch%/lch% point: outlined square; turns orange when out of gamut */
+.dot-pct {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.dot-pct.is-oog {
+  stroke: oklch(0.82 0.18 35);
+  stroke-width: 2;
+}
+
 /* ── panel ────────────────────────────────────────────────── */
 .panel {
   display: flex;
@@ -485,4 +497,10 @@ body {
 
 .k--okhsl {
   border-top: 2px dotted oklch(0.8 0.16 250);
+}
+
+.k--pct {
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--ink);
 }
