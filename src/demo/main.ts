@@ -42,8 +42,19 @@ const ranges: RangeSpec[] = [
 const selects: SelectSpec[] = [
   { key: 'mode', label: 'model', options: MODES, value: 'oklch' },
   { key: 'gamut', label: 'gamut', options: ['srgb', 'display-p3'], value: 'srgb' },
+  { key: 'curve', label: 'relC curve', options: ['linear', 'smoothstep', 'ease-in'], value: 'linear' },
   { key: 'compare', label: 'overlay actual', options: ['on', 'off'], value: 'on' },
 ];
+
+// nutColor's own relC response curves — pure math, no other model involved.
+// Each maps 0→0 and 1→1 so relC: 1 stays on the shell; beyond 1 (overshoot)
+// they continue monotonically.
+const linear = (x: number) => x;
+const CURVES: Record<string, (x: number) => number> = {
+  linear,
+  smoothstep: (x) => (x <= 0 ? 0 : x >= 1 ? x : x * x * (3 - 2 * x)),
+  'ease-in': (x) => (x <= 0 ? 0 : x * x),
+};
 
 // Faithful CSS for the active family. `t` is normalized lightness 0..1.
 const css = (fam: Family, t: number, c: number, h: number) =>
@@ -94,8 +105,14 @@ function render(v: ControlValues): void {
   const relC = v.values.relC ?? 1;
   const t = lMaxOf(fam) === 1 ? lNative : lNative / 100; // normalized 0..1
 
-  const col = relch({ mode, l: lNative, relC, h, gamut });
   const peakC = cusp({ mode, l: lNative, h, gamut }).c;
+
+  // nutColor's relC curve — affects only the nutColor sample, never the
+  // okhsl / oklch% references.
+  const curveName = v.choices.curve ?? 'linear';
+  const ease = CURVES[curveName] ?? linear;
+
+  const col = relch({ mode, l: lNative, relC, h, gamut, ease });
 
   // nutColor (center): relC relative to the cusp.
   const cssNut = css(fam, t, col.c, h);
