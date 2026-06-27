@@ -47,6 +47,24 @@ Defaults: `mode: 'oklch'`, `gamut: 'srgb'`. Modes: `oklch`, `lch` (the two cusp-
 cylindrical CSS spaces). Gamuts: `srgb`, `display-p3`. Input is always cylindrical
 (`l`, `h`, `relC`).
 
+### Curves / easing
+
+nutColor's response is **linear** and ships **no easing functions** — that's deliberate.
+Easing is a 1-D remap of an input, so apply your own (or any easing library) to whatever
+axis you want, before the call:
+
+```js
+import { relch } from 'nutcolor';
+const easeIn = (x) => x * x;
+
+// curve the saturation response:
+relch({ l: 0.7, relC: easeIn(0.5), h: 30 });
+// curve lightness (e.g. toward an HSL-like ramp):
+relch({ l: easeIn(0.7), relC: 1, h: 30 });
+```
+
+A well-behaved ease maps `0→0` and `1→1`, so `relC: 1` still lands exactly on the shell.
+
 ## Development
 
 ```bash

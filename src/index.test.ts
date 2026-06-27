@@ -53,15 +53,6 @@ describe('relch', () => {
     expect(relch({ l: 0.6, relC: 1.5, h: 30 }).c).toBeCloseTo(peak.c * 1.5, 6);
   });
 
-  it('applies an ease curve to relC before scaling by the cusp', () => {
-    const peak = cusp({ l: 0.6, h: 30 }).c;
-    const square = relch({ l: 0.6, relC: 0.5, h: 30, ease: (x) => x * x });
-    expect(square.c).toBeCloseTo(0.25 * peak, 6);
-    // ease(1) = 1 still lands on the shell
-    const onShell = relch({ l: 0.6, relC: 1, h: 30, ease: (x) => x * x });
-    expect(onShell.c).toBeCloseTo(peak, 6);
-  });
-
   it('wraps hue and honors the gamut option', () => {
     const a = relch({ l: 0.6, relC: 1, h: 390 });
     const b = relch({ l: 0.6, relC: 1, h: 30 });

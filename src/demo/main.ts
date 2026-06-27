@@ -16,6 +16,25 @@ const lMaxOf = (fam: Family) => (fam === 'ok' ? 1 : 100);
 // CSS percentage reference for chroma: oklch 100% = 0.4, lch 100% = 150.
 const PCT_REF = (fam: Family) => (fam === 'ok' ? 0.4 : 150);
 
+// Demo-local easing functions. The LIB ships none of these — easing is the
+// caller's concern, applied to whatever axis you like by transforming the
+// input before relch(). Each maps [0,1] -> [0,1].
+const id = (x: number) => x;
+const toe = (x: number) => {
+  const k1 = 0.206;
+  const k2 = 0.03;
+  const k3 = (1 + k1) / (1 + k2);
+  return 0.5 * (k3 * x - k1 + Math.sqrt((k3 * x - k1) ** 2 + 4 * k2 * k3 * x));
+};
+const EASE: Record<string, (x: number) => number> = {
+  linear: id,
+  smoothstep: (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x)),
+  'ease-in': (x) => x * x,
+  'ease-out': (x) => 1 - (1 - x) * (1 - x),
+  toe,
+};
+const EASE_NAMES = Object.keys(EASE);
+
 const root = document.documentElement;
 const controlsHost = document.getElementById('controls')!;
 const sliceHost = document.getElementById('slice')!;
@@ -42,19 +61,10 @@ const ranges: RangeSpec[] = [
 const selects: SelectSpec[] = [
   { key: 'mode', label: 'model', options: MODES, value: 'oklch' },
   { key: 'gamut', label: 'gamut', options: ['srgb', 'display-p3'], value: 'srgb' },
-  { key: 'curve', label: 'relC curve', options: ['linear', 'smoothstep', 'ease-in'], value: 'linear' },
+  { key: 'curveL', label: 'L curve', options: EASE_NAMES, value: 'linear' },
+  { key: 'curveC', label: 'relC curve', options: EASE_NAMES, value: 'linear' },
   { key: 'compare', label: 'overlay actual', options: ['on', 'off'], value: 'on' },
 ];
-
-// nutColor's own relC response curves — pure math, no other model involved.
-// Each maps 0→0 and 1→1 so relC: 1 stays on the shell; beyond 1 (overshoot)
-// they continue monotonically.
-const linear = (x: number) => x;
-const CURVES: Record<string, (x: number) => number> = {
-  linear,
-  smoothstep: (x) => (x <= 0 ? 0 : x >= 1 ? x : x * x * (3 - 2 * x)),
-  'ease-in': (x) => (x <= 0 ? 0 : x * x),
-};
 
 // Faithful CSS for the active family. `t` is normalized lightness 0..1.
 const css = (fam: Family, t: number, c: number, h: number) =>
@@ -100,28 +110,29 @@ function render(v: ControlValues): void {
   const fam = familyOf(mode);
   const showActual = v.choices.compare === 'on';
 
-  const lNative = v.values.l ?? 0;
+  const lParam = v.values.l ?? 0; // raw slider, native scale
   const h = v.values.h ?? 0;
   const relC = v.values.relC ?? 1;
-  const t = lMaxOf(fam) === 1 ? lNative : lNative / 100; // normalized 0..1
+  const tParam = lMaxOf(fam) === 1 ? lParam : lParam / 100; // raw normalized L
 
-  const peakC = cusp({ mode, l: lNative, h, gamut }).c;
+  // Curves are applied to nutColor's input axes only (okhsl / oklch% stay pure).
+  const easeL = EASE[v.choices.curveL ?? 'linear'] ?? id;
+  const easeC = EASE[v.choices.curveC ?? 'linear'] ?? id;
+  const t = Math.min(Math.max(easeL(tParam), 0), 1); // eased normalized L
+  const lEased = t * lMaxOf(fam); // eased native L
+  const relCe = easeC(Math.min(relC, 1)) + Math.max(relC - 1, 0); // ease the 0..1 part, keep overshoot
 
-  // nutColor's relC curve — affects only the nutColor sample, never the
-  // okhsl / oklch% references.
-  const curveName = v.choices.curve ?? 'linear';
-  const ease = CURVES[curveName] ?? linear;
+  const col = relch({ mode, l: lEased, relC: relCe, h, gamut });
+  const peakC = cusp({ mode, l: lEased, h, gamut }).c;
 
-  const col = relch({ mode, l: lNative, relC, h, gamut, ease });
-
-  // nutColor (center): relC relative to the cusp.
+  // nutColor (center): relC relative to the cusp, with the chosen curves.
   const cssNut = css(fam, t, col.c, h);
-  // raw percentage: chroma as an absolute fraction of the CSS reference (ignores the cusp).
-  const cPct = relC * PCT_REF(fam);
+  // raw percentage: chroma as an absolute CSS fraction (ignores the cusp), same lightness.
+  const cPct = relCe * PCT_REF(fam);
   const cssPct = css(fam, t, cPct, h);
-  // OkHSL: per-lightness saturation, the same idea as relC.
-  const okhsl = okhslCoords(fam, h, Math.min(relC, 1), t);
-  const hexOkhsl = okhslHex(h, Math.min(relC, 1), t);
+  // OkHSL: pure reference — its own model, fed the RAW params (no nutColor curves).
+  const okhsl = okhslCoords(fam, h, Math.min(relC, 1), tParam);
+  const hexOkhsl = okhslHex(h, Math.min(relC, 1), tParam);
 
   // Theme the page with nutColor's live color.
   root.style.setProperty('--live', cssNut);
