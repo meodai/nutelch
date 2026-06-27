@@ -1,8 +1,8 @@
-# nutColor
+# nutelch
 
 Chroma relative to the gamut **shell** (the cusp) in OKLCH / LCH.
 A *nut* is a "Schalenfrucht" — it has a hull; so does a perceptual color space.
-nutColor lets you say "halfway to the boundary" (`relC: 0.5`) at any lightness and hue.
+nutelch lets you say "halfway to the boundary" (`relC: 0.5`) at any lightness and hue.
 
 Dependency-free at runtime: gamut boundaries are precomputed into compact LUTs
 (culori is a build-time dependency only) and looked up with bilinear interpolation.
@@ -10,13 +10,13 @@ Dependency-free at runtime: gamut boundaries are precomputed into compact LUTs
 ## Install
 
 ```bash
-npm install nutcolor
+npm install nutelch
 ```
 
 ## Usage
 
 ```js
-import { cusp, relch, toLab } from 'nutcolor';
+import { cusp, relch, toLab } from 'nutelch';
 
 // Max in-gamut chroma at L=0.6, H=30 (OKLCH, sRGB) — the shell point:
 cusp({ l: 0.6, h: 30 });
@@ -49,12 +49,12 @@ cylindrical CSS spaces). Gamuts: `srgb`, `display-p3`. Input is always cylindric
 
 ### Curves / easing
 
-nutColor's response is **linear** and ships **no easing functions** — that's deliberate.
+nutelch's response is **linear** and ships **no easing functions** — that's deliberate.
 Easing is a 1-D remap of an input, so apply your own (or any easing library) to whatever
 axis you want, before the call:
 
 ```js
-import { relch } from 'nutcolor';
+import { relch } from 'nutelch';
 const easeIn = (x) => x * x;
 
 // curve the saturation response:

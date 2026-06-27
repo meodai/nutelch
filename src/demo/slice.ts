@@ -7,7 +7,7 @@ export interface SliceInput {
   hue: number;
   lMax: number; // 1 for OK family, 100 for CIE family (axis labels)
   cssColor: (t: number, c: number) => string; // (normalized L, chroma) -> CSS color string
-  lutEnvelope: (t: number) => number; // nutColor LUT boundary chroma, t = normalized L
+  lutEnvelope: (t: number) => number; // nutelch LUT boundary chroma, t = normalized L
   actualEnvelope: (t: number) => number; // culori live boundary, same t
   okhslCurve?: Array<[number, number]> | null; // OkHSL boundary as [normalized L, chroma] points
   cmax: number; // x-axis max chroma for scaling

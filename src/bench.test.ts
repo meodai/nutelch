@@ -1,11 +1,23 @@
 import { describe, it, expect } from 'vitest';
-import { clampChroma } from 'culori';
+import { clampChroma, converter } from 'culori';
 import { maxChroma } from './interp';
+import { relch } from './index';
 import type { Lut } from './luts/decode';
 import { oklchSrgb, oklchP3, lchSrgb, lchP3 } from './luts';
 
+const toOklch = converter('oklch');
+
+// Ottosson's lightness toe: feeding okhsl.l = toe(L) places OkHSL at OKLab
+// lightness L, so its boundary is comparable to nutelch's at the same L.
+function toe(x: number): number {
+  const k1 = 0.206;
+  const k2 = 0.03;
+  const k3 = (1 + k1) / (1 + k2);
+  return 0.5 * (k3 * x - k1 + Math.sqrt((k3 * x - k1) ** 2 + 4 * k2 * k3 * x));
+}
+
 // "Direct conversion": compute the gamut-boundary chroma live with culori, the
-// same way the LUTs were generated. This is what nutColor's LUT + bilinear
+// same way the LUTs were generated. This is what nutelch's LUT + bilinear
 // interpolation approximates, so we can measure both accuracy and speed against it.
 function actualMax(mode: 'oklch' | 'lch', l: number, h: number, rgbGamut: string, ceiling: number) {
   const clamped = clampChroma({ mode, l, c: ceiling, h } as never, mode, rgbGamut);
@@ -88,5 +100,65 @@ describe('LUT + interpolation vs direct culori conversion', () => {
       `speed (${n} lookups): LUT=${lutMs.toFixed(1)}ms  culori=${culoriMs.toFixed(1)}ms  speedup=${(culoriMs / lutMs).toFixed(0)}x`,
     );
     expect(lutMs).toBeLessThan(culoriMs);
+  });
+});
+
+// OkHSL is the closest sibling: its saturation is per-lightness-boundary
+// normalized, like relC. Here we compare both as gamut-boundary approximations
+// of sRGB (oklch family), and on speed, using culori's okhsl.
+describe('nutelch vs OkHSL (culori)', () => {
+  const ceiling = 0.5;
+
+  it('characterizes boundary error vs OkHSL (both small; OkHSL is analytic, nutelch is a sampled LUT)', () => {
+    const pts = sweep(1); // OKLab L 0.05..0.95
+    let lutMax = 0;
+    let lutSum = 0;
+    let okMax = 0;
+    let okSum = 0;
+    for (const [l, h] of pts) {
+      const actC = actualMax('oklch', l, h, 'rgb', ceiling);
+      // nutelch LUT boundary
+      const lutE = Math.abs(maxChroma(oklchSrgb, l, h) - actC);
+      // OkHSL analytic boundary (s = 1) at the same OKLab lightness
+      const ok = toOklch({ mode: 'okhsl', h, s: 1, l: toe(l) } as never) as { c?: number };
+      const okE = Math.abs((ok.c ?? 0) - actC);
+      lutSum += lutE;
+      okSum += okE;
+      if (lutE > lutMax) lutMax = lutE;
+      if (okE > okMax) okMax = okE;
+    }
+    const n = pts.length;
+    // eslint-disable-next-line no-console
+    console.log(
+      `boundary error vs true sRGB gamut — nutelch: mean=${(lutSum / n).toFixed(5)} max=${lutMax.toFixed(4)} | okhsl: mean=${(okSum / n).toFixed(5)} max=${okMax.toFixed(4)}`,
+    );
+    // Both track the true gamut closely. OkHSL's analytic boundary is the exact
+    // form of the same sRGB cusp model, so it edges out nutelch's sampled LUT on
+    // sRGB; nutelch trades that for generality (P3 + CIE) and speed.
+    expect(lutSum / n).toBeLessThan(0.001);
+    expect(okSum / n).toBeLessThan(0.001);
+  });
+
+  it('produces a boundary-relative color faster than an OkHSL conversion', () => {
+    const pts = sweep(1);
+    const ROUNDS = 30;
+
+    for (const [l, h] of pts) relch({ lut: oklchSrgb, l, relC: 0.8, h });
+    for (const [l, h] of pts) toOklch({ mode: 'okhsl', h, s: 0.8, l } as never);
+
+    const t0 = performance.now();
+    for (let r = 0; r < ROUNDS; r++) for (const [l, h] of pts) relch({ lut: oklchSrgb, l, relC: 0.8, h });
+    const lutMs = performance.now() - t0;
+
+    const t1 = performance.now();
+    for (let r = 0; r < ROUNDS; r++)
+      for (const [l, h] of pts) toOklch({ mode: 'okhsl', h, s: 0.8, l } as never);
+    const okMs = performance.now() - t1;
+
+    // eslint-disable-next-line no-console
+    console.log(
+      `speed (${ROUNDS * pts.length} colors): nutelch relch=${lutMs.toFixed(1)}ms  okhsl=${okMs.toFixed(1)}ms  speedup=${(okMs / lutMs).toFixed(0)}x`,
+    );
+    expect(lutMs).toBeLessThan(okMs);
   });
 });

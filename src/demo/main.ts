@@ -30,7 +30,7 @@ const PCT_REF = (fam: Family) => (fam === 'ok' ? 0.4 : 150);
 // input before relch(). Each maps [0,1] -> [0,1].
 const id = (x: number) => x;
 // Ottosson's lightness toe and its inverse. `toe-inv` is OkHSL's lightness
-// transform (okhsl.l -> oklab.L), so applying it to nutColor's L matches
+// transform (okhsl.l -> oklab.L), so applying it to nutelch's L matches
 // OkHSL's lightness exactly; `toe` is the opposite bend, shown for contrast.
 const K1 = 0.206;
 const K2 = 0.03;
@@ -128,7 +128,7 @@ function render(v: ControlValues): void {
   const relC = v.values.relC ?? 1;
   const tParam = lMaxOf(fam) === 1 ? lParam : lParam / 100; // raw normalized L
 
-  // Curves are applied to nutColor's input axes only (okhsl / oklch% stay pure).
+  // Curves are applied to nutelch's input axes only (okhsl / oklch% stay pure).
   const easeL = EASE[v.choices.curveL ?? 'linear'] ?? id;
   const easeC = EASE[v.choices.curveC ?? 'linear'] ?? id;
   const t = Math.min(Math.max(easeL(tParam), 0), 1); // eased normalized L
@@ -138,16 +138,16 @@ function render(v: ControlValues): void {
   const col = relch({ lut, l: lEased, relC: relCe, h });
   const peakC = cusp({ lut, l: lEased, h }).c;
 
-  // nutColor (center): relC relative to the cusp, with the chosen curves.
+  // nutelch (center): relC relative to the cusp, with the chosen curves.
   const cssNut = css(fam, t, col.c, h);
   // raw percentage: chroma as an absolute CSS fraction (ignores the cusp), same lightness.
   const cPct = relCe * PCT_REF(fam);
   const cssPct = css(fam, t, cPct, h);
-  // OkHSL: pure reference — its own model, fed the RAW params (no nutColor curves).
+  // OkHSL: pure reference — its own model, fed the RAW params (no nutelch curves).
   const okhsl = okhslCoords(fam, h, Math.min(relC, 1), tParam);
   const hexOkhsl = okhslHex(h, Math.min(relC, 1), tParam);
 
-  // Theme the page with nutColor's live color.
+  // Theme the page with nutelch's live color.
   root.style.setProperty('--live', cssNut);
   root.style.setProperty('--live-hue', String(h));
 

@@ -1,19 +1,19 @@
 {
-  "name": "nutcolor",
+  "name": "nutelch",
   "version": "0.0.0",
   "description": "Chroma relative to the gamut shell (cusp) in OKLCH/LCH. Dependency-free, LUT-backed.",
   "type": "module",
   "license": "MIT",
   "sideEffects": false,
   "files": ["dist"],
-  "main": "./dist/nutcolor.umd.cjs",
-  "module": "./dist/nutcolor.js",
+  "main": "./dist/nutelch.umd.cjs",
+  "module": "./dist/nutelch.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/nutcolor.js",
-      "require": "./dist/nutcolor.umd.cjs"
+      "import": "./dist/nutelch.js",
+      "require": "./dist/nutelch.umd.cjs"
     }
   },
   "scripts": {

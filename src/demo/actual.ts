@@ -19,9 +19,9 @@ export function actualMaxChroma(family: 'ok' | 'cie', l: number, h: number, gamu
 }
 
 // OkHSL (Ottosson) is an sRGB + OKLab model whose saturation is normalized to
-// the per-lightness gamut boundary — the same idea as nutColor's relC. Its s=1
+// the per-lightness gamut boundary — the same idea as nutelch's relC. Its s=1
 // edge traces OkHSL's analytic sRGB boundary in the OKLCH L×C plane, so it
-// should nearly coincide with nutColor's LUT boundary.
+// should nearly coincide with nutelch's LUT boundary.
 export function okhslBoundary(h: number, steps = 72): Array<[number, number]> {
   const pts: Array<[number, number]> = [];
   for (let i = 0; i <= steps; i++) {
@@ -38,7 +38,7 @@ export function okhslHex(h: number, s: number, l: number): string {
 }
 
 // OkHSL's color expressed in the active family's coordinates, so its value reads
-// on the same scale as nutColor's. `t` is normalized L (0..1).
+// on the same scale as nutelch's. `t` is normalized L (0..1).
 export function okhslCoords(
   family: 'ok' | 'cie',
   h: number,

@@ -8,8 +8,8 @@ export default defineConfig({
     outDir: 'dist',
     lib: {
       entry: fileURLToPath(new URL('./src/index.ts', import.meta.url)),
-      name: 'nutcolor',
-      fileName: 'nutcolor',
+      name: 'nutelch',
+      fileName: 'nutelch',
     },
   },
 });
