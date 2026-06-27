@@ -7,6 +7,7 @@ import {
   type SelectSpec,
 } from './controls';
 import { renderSlice } from './slice';
+import { renderWheel, type WheelCusp } from './wheel';
 import { actualMaxChroma, okhslBoundary, okhslHex, okhslCoords } from './actual';
 
 type Family = 'ok' | 'cie';
@@ -50,6 +51,34 @@ const EASE_NAMES = Object.keys(EASE);
 const root = document.documentElement;
 const controlsHost = document.getElementById('controls')!;
 const sliceHost = document.getElementById('slice')!;
+const wheelHost = document.getElementById('wheel')!;
+
+// Per-hue absolute cusp (max chroma over L) for the top view — depends only on
+// the LUT, so cache it per LUT.
+const wheelCache = new Map<unknown, { cusps: WheelCusp[]; maxCusp: number }>();
+function cuspsFor(lut: Parameters<typeof cusp>[0]['lut'], lMax: number) {
+  let hit = wheelCache.get(lut);
+  if (hit) return hit;
+  const cusps: WheelCusp[] = [];
+  let maxCusp = 0;
+  for (let h = 0; h < 360; h += 2) {
+    let bestC = 0;
+    let bestT = 0.5;
+    for (let li = 1; li < 64; li++) {
+      const t = li / 64;
+      const c = cusp({ lut, l: t * lMax, h }).c;
+      if (c > bestC) {
+        bestC = c;
+        bestT = t;
+      }
+    }
+    cusps.push({ h, c: bestC, t: bestT });
+    if (bestC > maxCusp) maxCusp = bestC;
+  }
+  hit = { cusps, maxCusp };
+  wheelCache.set(lut, hit);
+  return hit;
+}
 const readoutHost = document.getElementById('readout')!;
 const swOkhsl = document.getElementById('sw-okhsl')!;
 const swNut = document.getElementById('sw-nut')!;
@@ -173,6 +202,14 @@ function render(v: ControlValues): void {
     cmax: Math.max(peakC, col.c, cPct, lMaxOf(fam) === 1 ? 0.05 : 5) * 1.15,
     point: { l: t, c: col.c },
     showActual,
+  });
+
+  const wheel = cuspsFor(lut, lMaxOf(fam));
+  renderWheel(wheelHost, {
+    cusps: wheel.cusps,
+    maxCusp: wheel.maxCusp,
+    cssColor: (tt, c, hh) => css(fam, tt, c, hh),
+    marker: { hue: h, c: col.c },
   });
 }
 
