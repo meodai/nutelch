@@ -4,10 +4,41 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>nutColor — cusp explorer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400;1,9..144,500&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/src/demo/style.css" />
   </head>
   <body>
-    <main id="app"></main>
+    <div class="grain" aria-hidden="true"></div>
+    <main id="app">
+      <header class="masthead">
+        <h1 class="wordmark">nut<span>Color</span></h1>
+        <p class="tagline">chroma, measured relative to the shell</p>
+      </header>
+
+      <section class="stage">
+        <div class="stage__viz">
+          <div id="slice" class="slice-host"></div>
+        </div>
+
+        <aside class="panel">
+          <div class="swatch-wrap">
+            <div id="swatch" class="swatch"></div>
+            <div id="readout" class="readout"></div>
+          </div>
+          <div id="controls" class="controls"></div>
+        </aside>
+      </section>
+
+      <footer class="colophon">
+        <span class="dot-legend"><i class="k k--lut"></i> LUT · nutColor</span>
+        <span class="dot-legend"><i class="k k--actual"></i> actual · culori, live</span>
+      </footer>
+    </main>
     <script type="module" src="/src/demo/main.ts"></script>
   </body>
 </html>
