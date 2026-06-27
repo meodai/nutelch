@@ -1,9 +1,9 @@
 import type { Lut } from './luts/decode';
 
-// Bilinear lookup of the boundary chroma at (l, h).
-// l is clamped to [0, lMax]; h wraps modulo 360 across the hue seam.
-export function maxChroma(lut: Lut, l: number, lMax: number, h: number): number {
-  const { data, cmax, lSteps, hSteps } = lut;
+// Bilinear lookup of the boundary chroma at (l, h). l is clamped to [0, lut.lMax];
+// h wraps modulo 360 across the hue seam.
+export function maxChroma(lut: Lut, l: number, h: number): number {
+  const { data, cmax, lSteps, hSteps, lMax } = lut;
 
   const lf = Math.min(Math.max(l / lMax, 0), 1) * (lSteps - 1);
   const l0 = Math.floor(lf);

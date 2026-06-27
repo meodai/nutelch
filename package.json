@@ -1,9 +1,10 @@
 {
   "name": "nutcolor",
   "version": "0.0.0",
-  "description": "Chroma relative to the gamut shell (cusp) in OKLCH/OKLab/LCH/Lab. Dependency-free, LUT-backed.",
+  "description": "Chroma relative to the gamut shell (cusp) in OKLCH/LCH. Dependency-free, LUT-backed.",
   "type": "module",
   "license": "MIT",
+  "sideEffects": false,
   "files": ["dist"],
   "main": "./dist/nutcolor.umd.cjs",
   "module": "./dist/nutcolor.js",

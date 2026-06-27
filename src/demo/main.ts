@@ -1,4 +1,5 @@
-import { cusp, relch, type Mode, type Gamut } from '../index';
+import { cusp, relch, type Mode } from '../index';
+import { oklchSrgb, oklchP3, lchSrgb, lchP3 } from '../luts';
 import {
   buildControls,
   type ControlValues,
@@ -9,10 +10,18 @@ import { renderSlice } from './slice';
 import { actualMaxChroma, okhslBoundary, okhslHex, okhslCoords } from './actual';
 
 type Family = 'ok' | 'cie';
+type Gamut = 'srgb' | 'display-p3';
 
 const MODES: Mode[] = ['oklch', 'lch'];
 const familyOf = (m: Mode): Family => (m === 'oklch' ? 'ok' : 'cie');
 const lMaxOf = (fam: Family) => (fam === 'ok' ? 1 : 100);
+
+// The demo lets the user pick mode + gamut, then hands the matching LUT to the
+// lib. Apps that need only one gamut just import that single LUT directly.
+const LUTS = {
+  oklch: { srgb: oklchSrgb, 'display-p3': oklchP3 },
+  lch: { srgb: lchSrgb, 'display-p3': lchP3 },
+} as const;
 // CSS percentage reference for chroma: oklch 100% = 0.4, lch 100% = 150.
 const PCT_REF = (fam: Family) => (fam === 'ok' ? 0.4 : 150);
 
@@ -111,6 +120,7 @@ function render(v: ControlValues): void {
   const mode = v.choices.mode as Mode;
   const gamut = v.choices.gamut as Gamut;
   const fam = familyOf(mode);
+  const lut = LUTS[mode][gamut];
   const showActual = v.choices.compare === 'on';
 
   const lParam = v.values.l ?? 0; // raw slider, native scale
@@ -125,8 +135,8 @@ function render(v: ControlValues): void {
   const lEased = t * lMaxOf(fam); // eased native L
   const relCe = easeC(Math.min(relC, 1)) + Math.max(relC - 1, 0); // ease the 0..1 part, keep overshoot
 
-  const col = relch({ mode, l: lEased, relC: relCe, h, gamut });
-  const peakC = cusp({ mode, l: lEased, h, gamut }).c;
+  const col = relch({ lut, l: lEased, relC: relCe, h });
+  const peakC = cusp({ lut, l: lEased, h }).c;
 
   // nutColor (center): relC relative to the cusp, with the chosen curves.
   const cssNut = css(fam, t, col.c, h);
@@ -156,7 +166,7 @@ function render(v: ControlValues): void {
     hue: h,
     lMax: lMaxOf(fam),
     cssColor: (tt, c) => css(fam, tt, c, h),
-    lutEnvelope: (tt) => cusp({ mode, l: tt * lMaxOf(fam), h, gamut }).c,
+    lutEnvelope: (tt) => cusp({ lut, l: tt * lMaxOf(fam), h }).c,
     actualEnvelope: (tt) => actualMaxChroma(fam, tt * lMaxOf(fam), h, gamut),
     // OkHSL is an sRGB + OK model — only meaningful to overlay on the OK/sRGB slice.
     okhslCurve: fam === 'ok' && gamut === 'srgb' ? okhslBoundary(h) : null,

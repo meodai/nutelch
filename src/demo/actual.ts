@@ -1,5 +1,6 @@
 import { clampChroma, converter, formatHex } from 'culori';
-import type { Gamut } from '../index';
+
+type Gamut = 'srgb' | 'display-p3';
 
 const RGB_GAMUT: Record<Gamut, string> = { srgb: 'rgb', 'display-p3': 'p3' };
 const CFG = {
