@@ -166,14 +166,6 @@ body {
   opacity: 0.95;
 }
 
-.env--okhsl {
-  fill: none;
-  stroke: oklch(0.8 0.16 250);
-  stroke-width: 1.5;
-  stroke-dasharray: 1 4;
-  opacity: 0.95;
-}
-
 .cusp circle {
   fill: none;
   stroke: var(--ink);
@@ -202,7 +194,7 @@ body {
   stroke-width: 1.5;
 }
 
-/* raw oklch%/lch% point: outlined square; turns orange when out of gamut */
+/* raw oklch%/lch% point: outlined dot; turns orange when out of gamut */
 .dot-pct {
   fill: none;
   stroke: var(--ink);
@@ -212,6 +204,30 @@ body {
 .dot-pct.is-oog {
   stroke: oklch(0.82 0.18 35);
   stroke-width: 2;
+}
+
+.dot-pct-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  fill: var(--ink);
+}
+
+.dot-pct-label.is-oog {
+  fill: oklch(0.82 0.18 35);
+  font-weight: 700;
+}
+
+/* OkHSL point */
+.dot-okhsl {
+  fill: none;
+  stroke: oklch(0.78 0.18 255);
+  stroke-width: 1.5;
+}
+
+.dot-okhsl-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  fill: oklch(0.78 0.18 255);
 }
 
 /* ── panel ────────────────────────────────────────────────── */
@@ -493,14 +509,4 @@ body {
 
 .k--actual {
   border-top: 2px dashed oklch(0.85 0.19 35);
-}
-
-.k--okhsl {
-  border-top: 2px dotted oklch(0.8 0.16 250);
-}
-
-.k--pct {
-  width: 9px;
-  height: 9px;
-  border: 1.5px solid var(--ink);
 }

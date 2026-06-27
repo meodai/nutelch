@@ -9,10 +9,12 @@ export interface SliceInput {
   cssColor: (t: number, c: number) => string; // (normalized L, chroma) -> CSS color string
   lutEnvelope: (t: number) => number; // nutelch LUT boundary chroma, t = normalized L
   actualEnvelope: (t: number) => number; // culori live boundary, same t
-  okhslCurve?: Array<[number, number]> | null; // OkHSL boundary as [normalized L, chroma] points
   cmax: number; // x-axis max chroma for scaling
   point: SlicePoint | null; // nutColor's resolved point
   pctPoint?: SlicePoint | null; // the raw oklch%/lch% point, for comparison
+  pctLabel?: string; // label for that point (e.g. "oklch%")
+  okhslPoint?: SlicePoint | null; // where OkHSL places the current color
+  okhslLabel?: string;
   showActual: boolean; // overlay the actual (culori) envelope
 }
 
@@ -34,7 +36,7 @@ function niceStep(max: number): number {
 }
 
 export function renderSlice(host: HTMLElement, input: SliceInput): void {
-  const { hue, lMax, cssColor, lutEnvelope, actualEnvelope, okhslCurve, cmax, point, pctPoint, showActual } =
+  const { hue, lMax, cssColor, lutEnvelope, actualEnvelope, cmax, point, pctPoint, pctLabel, okhslPoint, okhslLabel, showActual } =
     input;
   const Y = (t: number) => PAD.t + (1 - t) * PLOT_H;
   const X = (c: number) => PAD.l + (cmax > 0 ? c / cmax : 0) * PLOT_W;
@@ -79,12 +81,6 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
   const actLine = showActual
     ? `<polyline class="env env--actual" points="${fmtPts(sample(actualEnvelope))}"/>`
     : '';
-  const okhslLine =
-    okhslCurve && okhslCurve.length
-      ? `<polyline class="env env--okhsl" points="${fmtPts(
-          okhslCurve.map(([t, c]) => [X(c), Y(t)]),
-        )}"/>`
-      : '';
 
   let cuspT = 0;
   let cuspC = 0;
@@ -128,8 +124,20 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
     const px = X(pctPoint.c);
     const py = Y(pctPoint.l);
     const oog = pctPoint.c > lutEnvelope(pctPoint.l) + 1e-9;
-    const s = 4.5;
-    pctMarker = `<rect class="dot-pct${oog ? ' is-oog' : ''}" x="${f(px - s)}" y="${f(py - s)}" width="${f(2 * s)}" height="${f(2 * s)}"/>`;
+    const cls = oog ? ' is-oog' : '';
+    const label = pctLabel ?? '%';
+    pctMarker = `<circle class="dot-pct${cls}" cx="${f(px)}" cy="${f(py)}" r="4.5"/>
+      <text class="dot-pct-label${cls}" x="${f(px)}" y="${f(py - 9)}" text-anchor="middle">${label}${oog ? ' ⚠' : ''}</text>`;
+  }
+
+  // Where OkHSL places the current color (its own lightness via the toe, its own
+  // saturation curve) — a labelled round marker.
+  let okhslMarker = '';
+  if (okhslPoint) {
+    const px = X(okhslPoint.c);
+    const py = Y(okhslPoint.l);
+    okhslMarker = `<circle class="dot-okhsl" cx="${f(px)}" cy="${f(py)}" r="4.5"/>
+      <text class="dot-okhsl-label" x="${f(px)}" y="${f(py + 16)}" text-anchor="middle">${okhslLabel ?? 'okhsl'}</text>`;
   }
 
   // nutColor's current point with crosshair guides.
@@ -152,8 +160,8 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
       ${fill}
       ${lutLine}
       ${actLine}
-      ${okhslLine}
       ${cuspMark}
+      ${okhslMarker}
       ${pctMarker}
       ${marker}
       ${cTicks}

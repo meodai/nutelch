@@ -7,7 +7,7 @@ import {
   type SelectSpec,
 } from './controls';
 import { renderSlice } from './slice';
-import { actualMaxChroma, okhslBoundary, okhslHex, okhslCoords } from './actual';
+import { actualMaxChroma, okhslHex, okhslCoords } from './actual';
 
 type Family = 'ok' | 'cie';
 type Gamut = 'srgb' | 'display-p3';
@@ -168,11 +168,13 @@ function render(v: ControlValues): void {
     cssColor: (tt, c) => css(fam, tt, c, h),
     lutEnvelope: (tt) => cusp({ lut, l: tt * lMaxOf(fam), h }).c,
     actualEnvelope: (tt) => actualMaxChroma(fam, tt * lMaxOf(fam), h, gamut),
-    // OkHSL is an sRGB + OK model — only meaningful to overlay on the OK/sRGB slice.
-    okhslCurve: fam === 'ok' && gamut === 'srgb' ? okhslBoundary(h) : null,
     cmax: Math.max(peakC, col.c, cPct, lMaxOf(fam) === 1 ? 0.05 : 5) * 1.15,
     point: { l: t, c: col.c },
     pctPoint: { l: t, c: cPct },
+    pctLabel: fam === 'ok' ? 'oklch%' : 'lch%',
+    // OkHSL is an sRGB + OK model — only place its point on the OK/sRGB slice.
+    okhslPoint: fam === 'ok' && gamut === 'srgb' ? { l: okhsl.t, c: okhsl.c } : null,
+    okhslLabel: 'okhsl',
     showActual,
   });
 }
