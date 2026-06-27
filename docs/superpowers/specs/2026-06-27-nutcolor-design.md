@@ -134,8 +134,29 @@ A Vite single-page **interactive cusp explorer**:
 - Sliders for `L`, `relC`, `H`.
 - Toggles for `mode` and `gamut`.
 - A live swatch of the resolved color.
-- A visualization of the gamut shell for the current hue: the chroma ramp and the boundary
-  curve across lightness, with the current point marked.
+- A **chroma × lightness slice** of the gamut shell for the current hue: colored gamut
+  fill, the boundary envelope across lightness, the cusp marked, and the current
+  `(l, relC)` point plotted against it.
+- A **LUT-cusp vs actual-cusp toggle**: overlay (or switch between) nutColor's
+  LUT-interpolated boundary and the ground-truth boundary computed live with culori. This
+  doubles as a visible accuracy check. The live "actual" path imports culori, which is a
+  **demo dependency only** — never a dependency of the published library.
+
+### Reuse from the sibling `cusphanger` project (`/Users/meodai/Sites/testcolor`)
+
+Adapt, don't copy blindly — generalize from OKLCH-only to the four nutColor modes:
+
+- **`src/lib/gamut.ts`** — `maxChromaAt(hue, l, gamut)` (culori `clampChroma`, = the
+  *actual* boundary) and `cusp(hue, gamut)` (absolute per-hue peak). This is the reference
+  the demo toggle compares against **and** the basis for the build-time LUT sampler.
+- **`src/demo/slice.ts`** — the chroma×lightness slice renderer (gamut fill, envelope,
+  cusp marker, point/guide overlay) to adapt for the dual LUT/actual envelope.
+- **`src/demo/{wheel,controls,swatches}.ts`, `src/demo/style.css`** — demo scaffolding
+  (hue wheel, sliders + dropdowns, swatches, styles).
+- **`vite.lib.config.ts`** (lib build with `vite-plugin-dts`) and the vitest/demo
+  `vite.config.ts` — the dual-config packaging pattern. Note the difference: cusphanger
+  marks `culori` as `external`; nutColor must **not** — the LUT data is bundled and the lib
+  has zero externals.
 
 ## Tooling & packaging
 
@@ -145,6 +166,7 @@ A Vite single-page **interactive cusp explorer**:
   - Interpolation accuracy vs culori ground truth (sampled across modes/gamuts/hues).
   - Edge cases: hue wrap at the 0/360 seam, lightness clamping at extremes, `relC` overshoot.
   - Coordinate conversion round-trips for `*lab` modes.
-- **culori** is a **devDependency only** (LUT generation); the published runtime has zero
-  dependencies.
+- **culori** is a **devDependency only** — used by the LUT build script and by the demo's
+  "actual cusp" path. The published runtime has **zero** dependencies (no externals in the
+  lib build; LUT data is bundled).
 - **Package name:** `nutcolor`; exported namespace `nutcolor`. Repo directory is `nutLCh`.
