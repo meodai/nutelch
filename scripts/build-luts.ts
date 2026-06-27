@@ -32,9 +32,15 @@ function sample(family: Family, gamut: Gamut): { b64: string; cmax: number } {
       if (c > cmax) cmax = c;
     }
   }
-  const u16 = new Uint16Array(L_STEPS * H_STEPS);
-  for (let i = 0; i < raw.length; i++) u16[i] = Math.round((raw[i]! / cmax) * 65535);
-  const b64 = Buffer.from(u16.buffer).toString('base64');
+  // Serialize as explicit little-endian bytes so the payload is host-independent
+  // (the decoder reads it back little-endian too).
+  const bytes = new Uint8Array(raw.length * 2);
+  for (let i = 0; i < raw.length; i++) {
+    const v = Math.round((raw[i]! / cmax) * 65535);
+    bytes[2 * i] = v & 0xff;
+    bytes[2 * i + 1] = (v >> 8) & 0xff;
+  }
+  const b64 = Buffer.from(bytes).toString('base64');
   return { b64, cmax };
 }
 

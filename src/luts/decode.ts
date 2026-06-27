@@ -13,7 +13,8 @@ export interface Lut {
 }
 
 // Decodes a base64 little-endian Uint16 buffer produced by scripts/build-luts.ts.
-// atob is available in browsers and Node >= 16.
+// Bytes are combined explicitly (low byte first) so the result is identical on
+// big- and little-endian hosts. atob is available in browsers and Node >= 16.
 export function decodeLut(
   mode: Mode,
   b64: string,
@@ -22,14 +23,15 @@ export function decodeLut(
   hSteps: number,
 ): Lut {
   const bin = atob(b64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return {
-    mode,
-    lMax: mode === 'oklch' ? 1 : 100,
-    cmax,
-    lSteps,
-    hSteps,
-    data: new Uint16Array(bytes.buffer),
-  };
+  const cells = lSteps * hSteps;
+  if (bin.length !== cells * 2) {
+    throw new Error(
+      `nutelch: malformed LUT — ${bin.length} bytes, expected ${cells * 2} (${lSteps}×${hSteps} uint16)`,
+    );
+  }
+  const data = new Uint16Array(cells);
+  for (let i = 0; i < cells; i++) {
+    data[i] = bin.charCodeAt(2 * i) | (bin.charCodeAt(2 * i + 1) << 8); // little-endian
+  }
+  return { mode, lMax: mode === 'oklch' ? 1 : 100, cmax, lSteps, hSteps, data };
 }
