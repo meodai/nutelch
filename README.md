@@ -1,6 +1,6 @@
 # nutColor
 
-Chroma relative to the gamut **shell** (the cusp) in OKLCH / OKLab / LCH / Lab.
+Chroma relative to the gamut **shell** (the cusp) in OKLCH / LCH.
 A *nut* is a "Schalenfrucht" — it has a hull; so does a perceptual color space.
 nutColor lets you say "halfway to the boundary" (`relC: 0.5`) at any lightness and hue.
 
@@ -16,7 +16,7 @@ npm install nutcolor
 ## Usage
 
 ```js
-import { cusp, relch } from 'nutcolor';
+import { cusp, relch, toLab } from 'nutcolor';
 
 // Max in-gamut chroma at L=0.6, H=30 (OKLCH, sRGB) — the shell point:
 cusp({ l: 0.6, h: 30 });
@@ -26,21 +26,26 @@ cusp({ l: 0.6, h: 30 });
 relch({ l: 0.6, relC: 0.5, h: 30 });
 // → { mode: 'oklch', l: 0.6, c: 0.06…, h: 30 }  (half the max chroma)
 
-// Other modes/gamuts; *lab returns rectangular coords:
-relch({ mode: 'oklab', l: 0.6, relC: 1, h: 30, gamut: 'display-p3' });
-// → { mode: 'oklab', l: 0.6, a: …, b: … }
-relch({ mode: 'lch', l: 60, relC: 1, h: 30 }); // CIE L on 0..100
+// LCH (CIE) — L on 0..100; display-p3 gamut:
+relch({ mode: 'lch', l: 60, relC: 1, h: 30, gamut: 'display-p3' });
+// → { mode: 'lch', l: 60, c: …, h: 30 }
+
+// Need rectangular a/b (for oklab()/lab() output)? Convert the result:
+toLab(relch({ l: 0.6, relC: 1, h: 30 }));
+// → { l: 0.6, a: …, b: … }
 ```
 
 ### API
 
 - `cusp({ mode?, l, h, gamut? })` → the color on the shell at `(l, h)`. `.c` is the raw
-  max in-gamut chroma. `*lab` modes return `{l,a,b}`.
+  max in-gamut chroma.
 - `relch({ mode?, l, relC, h, gamut? })` → resolves `relC` (0..1 of the way to the shell;
   overshoot allowed) to an absolute color.
+- `toLab({ l, c, h })` → `{ l, a, b }` — rectangular conversion for `oklab()`/`lab()` output.
 
-Defaults: `mode: 'oklch'`, `gamut: 'srgb'`. Modes: `oklch`, `oklab`, `lch`, `lab`.
-Gamuts: `srgb`, `display-p3`. Input is always cylindrical (`l`, `h`, `relC`).
+Defaults: `mode: 'oklch'`, `gamut: 'srgb'`. Modes: `oklch`, `lch` (the two cusp-native
+cylindrical CSS spaces). Gamuts: `srgb`, `display-p3`. Input is always cylindrical
+(`l`, `h`, `relC`).
 
 ## Development
 
@@ -48,6 +53,6 @@ Gamuts: `srgb`, `display-p3`. Input is always cylindrical (`l`, `h`, `relC`).
 npm install
 npm run build:luts   # regenerate LUTs from culori
 npm test
-npm run dev          # interactive cusp explorer
+npm run dev          # interactive cusp explorer (compares LUT vs actual vs OkHSV)
 npm run build:lib    # publishable dist/
 ```

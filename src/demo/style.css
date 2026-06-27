@@ -117,8 +117,8 @@ body {
   display: block;
   width: 100%;
   height: auto;
+  max-height: 76vh; /* keep the plot relative to the viewport, never overshooting */
   border-radius: 10px;
-  overflow: visible;
 }
 
 .slice__title {
@@ -168,6 +168,14 @@ body {
   opacity: 0.95;
 }
 
+.env--okhsv {
+  fill: none;
+  stroke: oklch(0.8 0.16 250);
+  stroke-width: 1.5;
+  stroke-dasharray: 1 4;
+  opacity: 0.95;
+}
+
 .cusp circle {
   fill: none;
   stroke: var(--ink);
@@ -211,9 +219,34 @@ body {
 }
 
 .swatch {
-  height: 116px;
+  display: flex;
+  height: 124px;
+}
+
+.swatch__cell {
+  position: relative;
+  flex: 1;
   background: var(--live);
-  transition: background-color 0.25s ease;
+  transition: background-color 0.2s ease;
+}
+
+.swatch__cell + .swatch__cell {
+  border-left: 1px solid oklch(1 0 0 / 0.12);
+}
+
+.swatch__cell small {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.25rem 0.4rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: oklch(0.16 0.012 70 / 0.7);
+  backdrop-filter: blur(2px);
+  text-align: center;
 }
 
 .readout {
@@ -430,4 +463,8 @@ body {
 
 .k--actual {
   border-top: 2px dashed oklch(0.85 0.19 35);
+}
+
+.k--okhsv {
+  border-top: 2px dotted oklch(0.8 0.16 250);
 }

@@ -9,6 +9,7 @@ export interface SliceInput {
   cssColor: (t: number, c: number) => string; // (normalized L, chroma) -> CSS color string
   lutEnvelope: (t: number) => number; // nutColor LUT boundary chroma, t = normalized L
   actualEnvelope: (t: number) => number; // culori live boundary, same t
+  okhsvCurve?: Array<[number, number]> | null; // OkHSV boundary as [normalized L, chroma] points
   cmax: number; // x-axis max chroma for scaling
   point: SlicePoint | null; // current resolved point
   showActual: boolean; // overlay the actual (culori) envelope
@@ -32,7 +33,8 @@ function niceStep(max: number): number {
 }
 
 export function renderSlice(host: HTMLElement, input: SliceInput): void {
-  const { hue, lMax, cssColor, lutEnvelope, actualEnvelope, cmax, point, showActual } = input;
+  const { hue, lMax, cssColor, lutEnvelope, actualEnvelope, okhsvCurve, cmax, point, showActual } =
+    input;
   const Y = (t: number) => PAD.t + (1 - t) * PLOT_H;
   const X = (c: number) => PAD.l + (cmax > 0 ? c / cmax : 0) * PLOT_W;
 
@@ -76,6 +78,12 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
   const actLine = showActual
     ? `<polyline class="env env--actual" points="${fmtPts(sample(actualEnvelope))}"/>`
     : '';
+  const okhsvLine =
+    okhsvCurve && okhsvCurve.length
+      ? `<polyline class="env env--okhsv" points="${fmtPts(
+          okhsvCurve.map(([t, c]) => [X(c), Y(t)]),
+        )}"/>`
+      : '';
 
   let cuspT = 0;
   let cuspC = 0;
@@ -131,6 +139,7 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
       ${fill}
       ${lutLine}
       ${actLine}
+      ${okhsvLine}
       ${cuspMark}
       ${marker}
       ${cTicks}

@@ -6,24 +6,25 @@ import {
   type SelectSpec,
 } from './controls';
 import { renderSlice } from './slice';
-import { actualMaxChroma } from './actual';
+import { actualMaxChroma, okhsvBoundary, okhsvHex } from './actual';
 
 type Family = 'ok' | 'cie';
 
-const MODES: Mode[] = ['oklch', 'oklab', 'lch', 'lab'];
-const familyOf = (m: Mode): Family => (m === 'oklch' || m === 'oklab' ? 'ok' : 'cie');
+const MODES: Mode[] = ['oklch', 'lch'];
+const familyOf = (m: Mode): Family => (m === 'oklch' ? 'ok' : 'cie');
 const lMaxOf = (fam: Family) => (fam === 'ok' ? 1 : 100);
 
 const root = document.documentElement;
 const controlsHost = document.getElementById('controls')!;
-const swatch = document.getElementById('swatch')!;
 const sliceHost = document.getElementById('slice')!;
 const readoutHost = document.getElementById('readout')!;
+const swNut = document.getElementById('sw-nut')!;
+const swOkhsv = document.getElementById('sw-okhsv')!;
+const swActual = document.getElementById('sw-actual')!;
 
 let family: Family = 'ok';
 let lMax = 1;
 
-// Lightness readout follows the active model's native L scale.
 const fmtL = (v: number) => (lMax === 1 ? v.toFixed(3) : Math.round(v).toString());
 
 const ranges: RangeSpec[] = [
@@ -38,9 +39,8 @@ const selects: SelectSpec[] = [
   { key: 'compare', label: 'overlay actual', options: ['on', 'off'], value: 'on' },
 ];
 
-// Faithful CSS for the active family — oklch for OK, lch for CIE. `t` is
-// normalized lightness 0..1; CIE L is expressed as a percentage.
-const cssColorFor = (fam: Family, h: number) => (t: number, c: number) =>
+// Faithful CSS for the active family. `t` is normalized lightness 0..1.
+const css = (fam: Family, t: number, c: number, h: number) =>
   fam === 'ok'
     ? `oklch(${t.toFixed(4)} ${c.toFixed(4)} ${h})`
     : `lch(${(t * 100).toFixed(2)}% ${c.toFixed(3)} ${h})`;
@@ -48,42 +48,27 @@ const cssColorFor = (fam: Family, h: number) => (t: number, c: number) =>
 const fmtComp = (fam: Family, v: number) => (fam === 'ok' ? v.toFixed(4) : v.toFixed(2));
 
 function renderReadout(
-  col: { mode: Mode } & ({ l: number; c: number; h: number } | { l: number; a: number; b: number }),
-  css: string,
+  col: { mode: Mode; l: number; c: number; h: number },
+  cssStr: string,
   fam: Family,
   relC: number,
-  cAbs: number,
   peakC: number,
 ): void {
   const lStr = fam === 'ok' ? col.l.toFixed(3) : Math.round(col.l).toString();
-  const comps =
-    'c' in col
-      ? [
-          ['L', lStr],
-          ['C', fmtComp(fam, col.c)],
-          ['H', `${Math.round(col.h)}°`],
-        ]
-      : [
-          ['L', lStr],
-          ['a', fmtComp(fam, col.a)],
-          ['b', fmtComp(fam, col.b)],
-        ];
-
   const over = relC > 1.0001;
-  const peakStr = fmtComp(fam, peakC);
-  const cStr = fmtComp(fam, cAbs);
-
   readoutHost.innerHTML = `
     <div class="readout__mode">${col.mode}</div>
     <dl class="readout__grid">
-      ${comps.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}
+      <div><dt>L</dt><dd>${lStr}</dd></div>
+      <div><dt>C</dt><dd>${fmtComp(fam, col.c)}</dd></div>
+      <div><dt>H</dt><dd>${Math.round(col.h)}°</dd></div>
     </dl>
     <div class="readout__map ${over ? 'is-over' : ''}">
-      relC <b>${relC.toFixed(3)}</b> → C <b>${cStr}</b>
-      <span class="readout__cusp">cusp ${peakStr}</span>
+      relC <b>${relC.toFixed(3)}</b> → C <b>${fmtComp(fam, col.c)}</b>
+      <span class="readout__cusp">cusp ${fmtComp(fam, peakC)}</span>
       ${over ? '<span class="readout__flag">out of gamut</span>' : ''}
     </div>
-    <code class="readout__css">${css}</code>`;
+    <code class="readout__css">${cssStr}</code>`;
 }
 
 function render(v: ControlValues): void {
@@ -98,33 +83,33 @@ function render(v: ControlValues): void {
   const t = lMaxOf(fam) === 1 ? lNative : lNative / 100; // normalized 0..1
 
   const col = relch({ mode, l: lNative, relC, h, gamut });
-  const cAbs = 'c' in col ? col.c : Math.hypot(col.a, col.b);
-  const peak = cusp({ mode, l: lNative, h, gamut });
-  const peakC = 'c' in peak ? peak.c : Math.hypot(peak.a, peak.b);
+  const peakC = cusp({ mode, l: lNative, h, gamut }).c;
+  const actualC = relC * actualMaxChroma(fam, lNative, h, gamut);
 
-  const css =
-    fam === 'ok'
-      ? `oklch(${t.toFixed(4)} ${cAbs.toFixed(4)} ${h})`
-      : `lch(${lNative.toFixed(2)}% ${cAbs.toFixed(3)} ${h})`;
+  const cssNut = css(fam, t, col.c, h);
+  const cssActual = css(fam, t, actualC, h);
+  const hexOkhsv = okhsvHex(h, Math.min(relC, 1), t);
 
-  // Theme the page with the live color.
-  root.style.setProperty('--live', css);
+  // Theme the page with nutColor's live color.
+  root.style.setProperty('--live', cssNut);
   root.style.setProperty('--live-hue', String(h));
-  swatch.style.background = css;
 
-  renderReadout(col, css, fam, relC, cAbs, peakC);
+  swNut.style.background = cssNut;
+  swActual.style.background = cssActual;
+  swOkhsv.style.background = hexOkhsv;
+
+  renderReadout(col, cssNut, fam, relC, peakC);
 
   renderSlice(sliceHost, {
     hue: h,
     lMax: lMaxOf(fam),
-    cssColor: cssColorFor(fam, h),
-    lutEnvelope: (tt) => {
-      const r = cusp({ mode, l: tt * lMaxOf(fam), h, gamut });
-      return 'c' in r ? r.c : Math.hypot(r.a, r.b);
-    },
+    cssColor: (tt, c) => css(fam, tt, c, h),
+    lutEnvelope: (tt) => cusp({ mode, l: tt * lMaxOf(fam), h, gamut }).c,
     actualEnvelope: (tt) => actualMaxChroma(fam, tt * lMaxOf(fam), h, gamut),
-    cmax: Math.max(peakC, cAbs, lMaxOf(fam) === 1 ? 0.05 : 5) * 1.15,
-    point: { l: t, c: cAbs },
+    // OkHSV is an sRGB + OK model — only meaningful to overlay on the OK/sRGB slice.
+    okhsvCurve: fam === 'ok' && gamut === 'srgb' ? okhsvBoundary(h) : null,
+    cmax: Math.max(peakC, col.c, actualC, lMaxOf(fam) === 1 ? 0.05 : 5) * 1.15,
+    point: { l: t, c: col.c },
     showActual,
   });
 }
@@ -132,8 +117,8 @@ function render(v: ControlValues): void {
 const handle = buildControls(controlsHost, ranges, selects, (v, changed) => {
   const newFamily = familyOf(v.choices.mode as Mode);
   // Switching model family rescales the lightness slider to the native L range,
-  // preserving the relative position. setRange patches in place — no rebuild,
-  // so focus and scroll position are untouched.
+  // preserving relative position. setRange patches in place (no rebuild), so
+  // focus and scroll position are untouched.
   if (changed === 'mode' && newFamily !== family) {
     const relPos = (v.values.l ?? 0) / lMax;
     const newMax = lMaxOf(newFamily);
