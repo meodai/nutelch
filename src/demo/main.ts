@@ -20,17 +20,20 @@ const PCT_REF = (fam: Family) => (fam === 'ok' ? 0.4 : 150);
 // caller's concern, applied to whatever axis you like by transforming the
 // input before relch(). Each maps [0,1] -> [0,1].
 const id = (x: number) => x;
-const toe = (x: number) => {
-  const k1 = 0.206;
-  const k2 = 0.03;
-  const k3 = (1 + k1) / (1 + k2);
-  return 0.5 * (k3 * x - k1 + Math.sqrt((k3 * x - k1) ** 2 + 4 * k2 * k3 * x));
-};
+// Ottosson's lightness toe and its inverse. `toe-inv` is OkHSL's lightness
+// transform (okhsl.l -> oklab.L), so applying it to nutColor's L matches
+// OkHSL's lightness exactly; `toe` is the opposite bend, shown for contrast.
+const K1 = 0.206;
+const K2 = 0.03;
+const K3 = (1 + K1) / (1 + K2);
+const toe = (x: number) => 0.5 * (K3 * x - K1 + Math.sqrt((K3 * x - K1) ** 2 + 4 * K2 * K3 * x));
+const toeInv = (x: number) => (x * x + K1 * x) / (K3 * (x + K2));
 const EASE: Record<string, (x: number) => number> = {
   linear: id,
   smoothstep: (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x)),
   'ease-in': (x) => x * x,
   'ease-out': (x) => 1 - (1 - x) * (1 - x),
+  'toe-inv': toeInv,
   toe,
 };
 const EASE_NAMES = Object.keys(EASE);
