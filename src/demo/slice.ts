@@ -8,14 +8,12 @@ export interface SliceInput {
   lMax: number; // 1 for OK family, 100 for CIE family (axis labels)
   cssColor: (t: number, c: number) => string; // (normalized L, chroma) -> CSS color string
   lutEnvelope: (t: number) => number; // nutelch LUT boundary chroma, t = normalized L
-  actualEnvelope: (t: number) => number; // culori live boundary, same t
   cmax: number; // x-axis max chroma for scaling
   point: SlicePoint | null; // nutColor's resolved point
   pctPoint?: SlicePoint | null; // the raw oklch%/lch% point, for comparison
   pctLabel?: string; // label for that point (e.g. "oklch%")
   okhslPoint?: SlicePoint | null; // where OkHSL places the current color
   okhslLabel?: string;
-  showActual: boolean; // overlay the actual (culori) envelope
 }
 
 const W = 540;
@@ -36,7 +34,7 @@ function niceStep(max: number): number {
 }
 
 export function renderSlice(host: HTMLElement, input: SliceInput): void {
-  const { hue, lMax, cssColor, lutEnvelope, actualEnvelope, cmax, point, pctPoint, pctLabel, okhslPoint, okhslLabel, showActual } =
+  const { hue, lMax, cssColor, lutEnvelope, cmax, point, pctPoint, pctLabel, okhslPoint, okhslLabel } =
     input;
   const Y = (t: number) => PAD.t + (1 - t) * PLOT_H;
   const X = (c: number) => PAD.l + (cmax > 0 ? c / cmax : 0) * PLOT_W;
@@ -78,9 +76,6 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
     return out;
   };
   const lutLine = `<polyline class="env env--lut" points="${fmtPts(sample(lutEnvelope))}"/>`;
-  const actLine = showActual
-    ? `<polyline class="env env--actual" points="${fmtPts(sample(actualEnvelope))}"/>`
-    : '';
 
   let cuspT = 0;
   let cuspC = 0;
@@ -159,7 +154,6 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
       ${lTicks}
       ${fill}
       ${lutLine}
-      ${actLine}
       ${cuspMark}
       ${okhslMarker}
       ${pctMarker}

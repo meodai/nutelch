@@ -7,7 +7,7 @@ import {
   type SelectSpec,
 } from './controls';
 import { renderSlice } from './slice';
-import { actualMaxChroma, okhslHex, okhslCoords } from './actual';
+import { okhslHex, okhslCoords } from './actual';
 
 type Family = 'ok' | 'cie';
 type Gamut = 'srgb' | 'display-p3';
@@ -75,7 +75,6 @@ const selects: SelectSpec[] = [
   { key: 'gamut', label: 'gamut', options: ['srgb', 'display-p3'], value: 'srgb' },
   { key: 'curveL', label: 'L curve', options: EASE_NAMES, value: 'linear' },
   { key: 'curveC', label: 'relC curve', options: EASE_NAMES, value: 'linear' },
-  { key: 'compare', label: 'overlay actual', options: ['on', 'off'], value: 'on' },
 ];
 
 // Faithful CSS for the active family. `t` is normalized lightness 0..1.
@@ -121,7 +120,6 @@ function render(v: ControlValues): void {
   const gamut = v.choices.gamut as Gamut;
   const fam = familyOf(mode);
   const lut = LUTS[mode][gamut];
-  const showActual = v.choices.compare === 'on';
 
   const lParam = v.values.l ?? 0; // raw slider, native scale
   const h = v.values.h ?? 0;
@@ -167,7 +165,6 @@ function render(v: ControlValues): void {
     lMax: lMaxOf(fam),
     cssColor: (tt, c) => css(fam, tt, c, h),
     lutEnvelope: (tt) => cusp({ lut, l: tt * lMaxOf(fam), h }).c,
-    actualEnvelope: (tt) => actualMaxChroma(fam, tt * lMaxOf(fam), h, gamut),
     cmax: Math.max(peakC, col.c, cPct, lMaxOf(fam) === 1 ? 0.05 : 5) * 1.15,
     point: { l: t, c: col.c },
     pctPoint: { l: t, c: cPct },
@@ -175,7 +172,6 @@ function render(v: ControlValues): void {
     // OkHSL is an sRGB + OK model — only place its point on the OK/sRGB slice.
     okhslPoint: fam === 'ok' && gamut === 'srgb' ? { l: okhsl.t, c: okhsl.c } : null,
     okhslLabel: 'okhsl',
-    showActual,
   });
 }
 

@@ -159,13 +159,6 @@ body {
   opacity: 0.9;
 }
 
-.env--actual {
-  stroke: oklch(0.85 0.19 35);
-  stroke-width: 1.5;
-  stroke-dasharray: 4 3;
-  opacity: 0.95;
-}
-
 .cusp circle {
   fill: none;
   stroke: var(--ink);
@@ -480,33 +473,3 @@ body {
   outline-offset: 2px;
 }
 
-/* ── colophon ─────────────────────────────────────────────── */
-.colophon {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.4rem;
-  margin-top: 1.6rem;
-  color: var(--ink-dim);
-  font-size: 0.74rem;
-  letter-spacing: 0.04em;
-}
-
-.dot-legend {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.k {
-  display: inline-block;
-  width: 18px;
-  height: 0;
-}
-
-.k--lut {
-  border-top: 2px solid var(--ink);
-}
-
-.k--actual {
-  border-top: 2px dashed oklch(0.85 0.19 35);
-}
