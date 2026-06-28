@@ -5,6 +5,26 @@
   "type": "module",
   "author": "David Aerne <meodai@gmail.com>",
   "license": "MIT",
+  "homepage": "https://meodai.github.io/nutelch/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/meodai/nutelch.git"
+  },
+  "bugs": {
+    "url": "https://github.com/meodai/nutelch/issues"
+  },
+  "keywords": [
+    "oklch",
+    "lch",
+    "color",
+    "color-space",
+    "gamut",
+    "chroma",
+    "cusp",
+    "saturation",
+    "okhsl",
+    "css-color"
+  ],
   "sideEffects": false,
   "files": ["dist"],
   "main": "./dist/nutelch.umd.cjs",
