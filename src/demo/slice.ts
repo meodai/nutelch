@@ -20,7 +20,9 @@ export interface SliceInput {
 
 const W = 540;
 const H = 480;
-const PAD = { l: 56, r: 24, t: 36, b: 42 };
+// No axis labels, so the plot runs edge to edge. Point labels that spill past the
+// border are handled by `overflow: visible` on the .slice element.
+const PAD = { l: 0, r: 0, t: 0, b: 0 };
 const PLOT_W = W - PAD.l - PAD.r;
 const PLOT_H = H - PAD.t - PAD.b;
 
@@ -106,11 +108,9 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
   if (pctPoint) {
     const px = X(pctPoint.c);
     const py = Y(pctPoint.l);
-    const oog = pctPoint.c > lutEnvelope(pctPoint.l) + 1e-9;
-    const cls = oog ? ' is-oog' : '';
     const label = pctLabel ?? '%';
-    pctMarker = `<circle class="dot-pct${cls}" cx="${f(px)}" cy="${f(py)}" r="4.5"/>
-      <text class="dot-pct-label${cls}" x="${f(px)}" y="${f(py - 9)}" text-anchor="middle">${label}${oog ? ' ⚠' : ''}</text>`;
+    pctMarker = `<circle class="dot-pct" cx="${f(px)}" cy="${f(py)}" r="4.5"/>
+      <text class="dot-pct-label" x="${f(px)}" y="${f(py - 9)}" text-anchor="middle">${label}</text>`;
   }
 
   // Where OkHSL places the current color (its own lightness via the toe, its own

@@ -222,6 +222,7 @@ body {
   height: auto;
   max-height: 76vh; /* keep the plot relative to the viewport, never overshooting */
   border-radius: 0;
+  overflow: visible; /* let edge point-labels spill past the plot border */
 }
 
 .grid {
