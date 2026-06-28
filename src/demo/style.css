@@ -325,13 +325,8 @@ body {
   flex-direction: column;
 }
 
-/* nutelch is the focus — give the center column more room */
-.swatch__item--main {
-  flex: 1.5;
-}
-
 .swatch__cell {
-  height: 124px;
+  aspect-ratio: 1;
   background: var(--live);
   transition: background-color 0.2s ease;
 }
