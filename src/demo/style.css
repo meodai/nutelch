@@ -408,7 +408,7 @@ body {
 .readout__map b {
   color: var(--ink);
   font-family: var(--mono);
-  font-weight: 700;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 
