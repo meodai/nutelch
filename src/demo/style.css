@@ -157,12 +157,11 @@ body {
   height: auto;
 }
 
-/* the word used inside the SVG masks (fill set per layer) */
 .wm-text {
   font-family: var(--sans);
-  font-weight: 800;
-  font-size: 230px;
-  letter-spacing: -0.01em;
+  font-weight: 900;
+  font-size: 252px;
+  letter-spacing: -.05em;
 }
 
 .tagline {
@@ -172,7 +171,6 @@ body {
   letter-spacing: 0.04em;
 }
 
-/* ── stage ────────────────────────────────────────────────── */
 .stage {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(260px, 1fr);
