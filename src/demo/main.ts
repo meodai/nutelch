@@ -177,7 +177,9 @@ function renderCode(lutName: string, fam: Family, l: number, relC: number, h: nu
   const lArg = fam === 'ok' ? l.toFixed(4) : l.toFixed(2);
   const cArg = relC.toFixed(fam === 'ok' ? 4 : 3);
   codeHost.textContent =
-    `import { relch, toCss, ${lutName} } from 'nutelch';\n\n` +
+    `import {\n` +
+    `  relch, toCss, ${lutName}\n` +
+    `} from 'nutelch';\n\n` +
     `const color = relch({\n` +
     `  lut: ${lutName},\n` +
     `  l: ${lArg},\n` +
