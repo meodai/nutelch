@@ -34,11 +34,13 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
     input;
   const cuspGiven = input.cusp ?? null;
   const rayAnchorT = input.rayAnchorT ?? null;
-  const Y = (t: number) => PAD.t + (1 - t) * PLOT_H;
-  const X = (c: number) => PAD.l + (cmax > 0 ? c / cmax : 0) * PLOT_W;
+  // Lightness runs along the horizontal (L axis on the bottom): t=0 left → t=1
+  // right. Chroma runs up the vertical: c=0 bottom → cmax top.
+  const X = (t: number) => PAD.l + t * PLOT_W;
+  const Y = (c: number) => PAD.t + (1 - (cmax > 0 ? c / cmax : 0)) * PLOT_H;
 
-  // The shell itself, filled with real gamut colors: each lightness row is a
-  // horizontal gradient from neutral (chroma 0) out to the boundary color.
+  // The shell itself, filled with real gamut colors: each lightness column is a
+  // vertical gradient from neutral (chroma 0, bottom) up to the boundary color.
   const ROWS = 56;
   let defs = '';
   let fill = '';
@@ -51,15 +53,15 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
     const c0 = lutEnvelope(t0);
     const c1 = lutEnvelope(t1);
     const id = `shell-row-${i}`;
-    defs += `<linearGradient id="${id}" x1="0" y1="0" x2="1" y2="0">
+    defs += `<linearGradient id="${id}" x1="0" y1="1" x2="0" y2="0">
         <stop offset="0%" stop-color="${cssColor(tm, 0)}"/>
         <stop offset="100%" stop-color="${cssColor(tm, cm)}"/>
       </linearGradient>`;
     fill += `<polygon points="${fmtPts([
-      [X(0), Y(t0)],
-      [X(c0), Y(t0)],
-      [X(c1), Y(t1)],
-      [X(0), Y(t1)],
+      [X(t0), Y(0)],
+      [X(t0), Y(c0)],
+      [X(t1), Y(c1)],
+      [X(t1), Y(0)],
     ])}" fill="url(#${id})"/>`;
   }
 
@@ -69,7 +71,7 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
     const out: Array<[number, number]> = [];
     for (let i = 0; i <= STEPS; i++) {
       const t = i / STEPS;
-      out.push([X(env(t)), Y(t)]);
+      out.push([X(t), Y(env(t))]);
     }
     return out;
   };
@@ -89,25 +91,17 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
   }
   const cuspLabel = lMax === 1 ? cuspC.toFixed(3) : Math.round(cuspC).toString();
   const cuspMark = `<g class="cusp">
-      <circle cx="${f(X(cuspC))}" cy="${f(Y(cuspT))}" r="4.5"/>
-      <text x="${f(X(cuspC) + 9)}" y="${f(Y(cuspT) + 4)}" text-anchor="start">cusp ${cuspLabel}</text>
+      <circle cx="${f(X(cuspT))}" cy="${f(Y(cuspC))}" r="4.5"/>
+      <text x="${f(X(cuspT))}" y="${f(Y(cuspC) - 11)}" text-anchor="middle">cusp ${cuspLabel}</text>
     </g>`;
-
-  // Lightness gridlines (unlabelled).
-  const lTicks = [0, 0.25, 0.5, 0.75, 1]
-    .map((t) => {
-      const y = Y(t);
-      return `<line class="grid" x1="${PAD.l}" y1="${f(y)}" x2="${W - PAD.r}" y2="${f(y)}"/>`;
-    })
-    .join('');
 
   // The raw oklch%/lch% point — an outlined square. When its chroma exceeds the
   // shell at its lightness it's out of gamut, so flag it (and it sits right of
   // the boundary envelope, making the overshoot visible).
   let pctMarker = '';
   if (pctPoint) {
-    const px = X(pctPoint.c);
-    const py = Y(pctPoint.l);
+    const px = X(pctPoint.l);
+    const py = Y(pctPoint.c);
     const label = pctLabel ?? '%';
     pctMarker = `<circle class="dot-pct" cx="${f(px)}" cy="${f(py)}" r="4.5"/>
       <text class="dot-pct-label" x="${f(px)}" y="${f(py - 9)}" text-anchor="middle">${label}</text>`;
@@ -117,8 +111,8 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
   // saturation curve) — a labelled round marker.
   let okhslMarker = '';
   if (okhslPoint) {
-    const px = X(okhslPoint.c);
-    const py = Y(okhslPoint.l);
+    const px = X(okhslPoint.l);
+    const py = Y(okhslPoint.c);
     okhslMarker = `<circle class="dot-okhsl" cx="${f(px)}" cy="${f(py)}" r="4.5"/>
       <text class="dot-okhsl-label" x="${f(px)}" y="${f(py + 16)}" text-anchor="middle">${okhslLabel ?? 'okhsl'}</text>`;
   }
@@ -129,17 +123,17 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
   let ray = '';
   if (rayAnchorT !== null && cuspC > 0) {
     ray = `<line class="ray" clip-path="url(#plot-clip)"
-      x1="${f(X(0))}" y1="${f(Y(rayAnchorT))}"
-      x2="${f(X(cuspC))}" y2="${f(Y(cuspT))}"/>`;
+      x1="${f(X(rayAnchorT))}" y1="${f(Y(0))}"
+      x2="${f(X(cuspT))}" y2="${f(Y(cuspC))}"/>`;
   }
 
   // nutColor's current point with crosshair guides.
   let marker = '';
   if (point) {
-    const px = X(point.c);
-    const py = Y(point.l);
-    marker = `<line class="guide" x1="${PAD.l}" y1="${f(py)}" x2="${f(px)}" y2="${f(py)}"/>
-      <line class="guide" x1="${f(px)}" y1="${f(py)}" x2="${f(px)}" y2="${H - PAD.b}"/>
+    const px = X(point.l);
+    const py = Y(point.c);
+    marker = `<line class="guide" x1="${f(px)}" y1="${f(py)}" x2="${f(px)}" y2="${H - PAD.b}"/>
+      <line class="guide" x1="${PAD.l}" y1="${f(py)}" x2="${f(px)}" y2="${f(py)}"/>
       <circle class="dot-halo" cx="${f(px)}" cy="${f(py)}" r="9"/>
       <circle class="dot" cx="${f(px)}" cy="${f(py)}" r="5"/>
       <text class="dot-label" x="${f(px)}" y="${f(py - 13)}" text-anchor="middle">nutelch</text>`;
@@ -151,7 +145,6 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
       <defs>${defs}
         <clipPath id="plot-clip"><rect x="${PAD.l}" y="${PAD.t}" width="${PLOT_W}" height="${PLOT_H}"/></clipPath>
       </defs>
-      ${lTicks}
       ${fill}
       ${lutLine}
       ${ray}

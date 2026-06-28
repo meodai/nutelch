@@ -251,7 +251,7 @@ function render(v: ControlValues): void {
     // Pin the chroma axis to the hue's global cusp (and the % reference) so it
     // stays put for every in-gamut move; it only grows past that when relC
     // overshoots the shell (col.c / cPct exceed the cusp).
-    cmax: Math.max(peakCusp.c, PCT_REF(fam), col.c, cPct, lMaxOf(fam) === 1 ? 0.05 : 5) * 1.15,
+    cmax: Math.max(peakCusp.c, PCT_REF(fam), col.c, cPct, lMaxOf(fam) === 1 ? 0.05 : 5) * 1.05,
     point: { l: t, c: col.c },
     pctPoint: { l: t, c: cPct },
     pctLabel: fam === 'ok' ? 'oklch%' : 'lch%',
