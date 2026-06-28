@@ -257,3 +257,58 @@ handle = buildControls(controlsHost, ranges, selects, (v, changed) => {
   }
   render(v);
 });
+
+// Live brag: time nutelch's LUT boundary lookup against culori computing the same
+// boundary the honest way, on the user's machine. Run after first paint so it
+// never delays the UI, and keep the workload identical for both contenders.
+function runBenchmark(): void {
+  const elSpeed = document.getElementById('brag-speedup');
+  const elRate = document.getElementById('brag-rate');
+  const elOkhsl = document.getElementById('brag-okhsl');
+  if (!elSpeed || !elRate || !elOkhsl) return;
+
+  const lut = oklchSrgb;
+  const N = 24000;
+  const ls = new Float64Array(N);
+  const hs = new Float64Array(N);
+  for (let i = 0; i < N; i++) {
+    ls[i] = 0.02 + ((i % 97) / 97) * 0.95;
+    hs[i] = (i * 7) % 360;
+  }
+
+  // Warm every path so JIT state is comparable.
+  let acc = 0;
+  for (let i = 0; i < 3000; i++) {
+    acc += cusp({ lut, l: ls[i]!, h: hs[i]! }).c;
+    acc += actualMaxChroma('ok', ls[i]!, hs[i]!, 'srgb');
+    acc += relch({ lut, l: ls[i]!, relC: 0.7, h: hs[i]! }).c;
+    acc += okhslCoords('ok', hs[i]!, 0.7, ls[i]!).c;
+  }
+
+  // 1) boundary lookup: nutelch cusp vs culori computing the gamut boundary.
+  const t0 = performance.now();
+  for (let i = 0; i < N; i++) acc += cusp({ lut, l: ls[i]!, h: hs[i]! }).c;
+  const nutMs = performance.now() - t0;
+
+  const t1 = performance.now();
+  for (let i = 0; i < N; i++) acc += actualMaxChroma('ok', ls[i]!, hs[i]!, 'srgb');
+  const culMs = performance.now() - t1;
+
+  // 2) boundary-relative color: nutelch relch vs an OkHSL (culori) conversion.
+  const t2 = performance.now();
+  for (let i = 0; i < N; i++) acc += relch({ lut, l: ls[i]!, relC: 0.7, h: hs[i]! }).c;
+  const nut2Ms = performance.now() - t2;
+
+  const t3 = performance.now();
+  for (let i = 0; i < N; i++) acc += okhslCoords('ok', hs[i]!, 0.7, ls[i]!).c;
+  const okMs = performance.now() - t3;
+
+  if (acc < 0) console.log(acc); // keep the loops from being optimized away
+
+  const fmt = (x: number) => (x >= 10 ? Math.round(x).toString() : x.toFixed(1));
+  elSpeed.textContent = fmt(culMs / nutMs);
+  elRate.textContent = Math.round(N / nutMs).toLocaleString();
+  elOkhsl.textContent = fmt(okMs / nut2Ms);
+}
+
+requestAnimationFrame(() => setTimeout(runBenchmark, 0));

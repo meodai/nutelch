@@ -161,6 +161,37 @@ body {
   color: var(--ink);
 }
 
+.brag {
+  list-style: none;
+  margin: 1.2rem 0 0;
+  padding: 0;
+  max-width: 55ch;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.9rem 1.4rem;
+}
+
+.brag li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.brag b {
+  font-family: var(--mono);
+  font-size: 1.6rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--live);
+}
+
+.brag span {
+  font-size: var(--fs-label);
+  color: var(--ink-dim);
+  line-height: 1.35;
+}
+
 .explain a {
   color: var(--ink);
   text-decoration-thickness: 1px;
