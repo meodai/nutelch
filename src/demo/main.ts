@@ -7,7 +7,7 @@ import {
   type SelectSpec,
 } from './controls';
 import { renderSlice } from './slice';
-import { okhslHex, okhslCoords } from './actual';
+import { okhslHex, okhslCoords, actualMaxChroma } from './actual';
 import { findCusp, sFromPoint, rayAnchorT, pointAtS, invertEase } from './cuspray';
 
 type Family = 'ok' | 'cie';

@@ -33,7 +33,7 @@
   --sans: 'Newsreader', Georgia, 'Times New Roman', serif;
 
   /* type scale — four steps, used everywhere instead of one-off sizes */
-  --fs-label: 0.72rem; /* captions: control / axis names, swatch names, dt */
+  --fs-label: .8rem; /* captions: control / axis names, swatch names, dt */
   --fs-small: 0.8rem; /* dense mono + secondary text: code, css, map, select */
   --fs-value: 0.9rem; /* numeric values: readout dd, slider value */
   --fs-body: 0.95rem; /* prose */
@@ -102,6 +102,7 @@ body {
 /* ── masthead ─────────────────────────────────────────────── */
 .masthead {
   margin-bottom: clamp(1.5rem, 4vw, 3rem);
+  text-align: center;
 }
 
 .wordmark {
@@ -470,7 +471,7 @@ body {
   -webkit-appearance: none;
   width: 15px;
   height: 15px;
-  border-radius: 0;
+  border-radius: 50%;
   background: var(--ink);
   border: 3px solid var(--bg);
   box-shadow: 0 0 0 1.5px var(--live);
@@ -486,7 +487,7 @@ body {
 .ctrl--range input[type='range']::-moz-range-thumb {
   width: 15px;
   height: 15px;
-  border-radius: 0;
+  border-radius: 50%;
   background: var(--ink);
   border: 3px solid var(--bg);
   box-shadow: 0 0 0 1.5px var(--live);
