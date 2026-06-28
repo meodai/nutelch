@@ -18,6 +18,7 @@ per-lightness gamut shell — and keeps **everything else** from OKLCH:
 | **Lightness**    | raw OKLab `L`        | **raw OKLab `L`**                          | toe-remapped                       |
 | **Hue**          | raw `H`              | **raw `H`**                               | raw `H`                            |
 | **Output**       | CSS `oklch()`        | **CSS `oklch()`**                         | needs conversion                   |
+| **Gamuts**       | gamut-agnostic       | **sRGB + Display-P3** (OKLCH & LCH LUTs)  | sRGB only                          |
 | **Out of gamut** | allowed              | **allowed (overshoot)**                   | clamped to `[0, 1]`                |
 
 So nutelch is **OKLCH with exactly one OkHSL property grafted on**: "saturation"
