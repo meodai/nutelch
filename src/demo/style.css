@@ -65,6 +65,13 @@
   box-sizing: border-box;
 }
 
+/* selection tinted with the live color; --live-ink is the contrasting text
+   color, computed in JS from the color's lightness */
+::selection {
+  background: var(--live);
+  color: var(--live-ink, var(--bg));
+}
+
 html,
 body {
   margin: 0;
@@ -400,7 +407,9 @@ body {
 
 .readout__map b {
   color: var(--ink);
+  font-family: var(--mono);
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .readout__cusp {

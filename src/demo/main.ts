@@ -103,7 +103,7 @@ function renderReadout(
     </dl>
     <div class="readout__map ${over ? 'is-over' : ''}">
       relC <b>${relC.toFixed(3)}</b> → C <b>${fmtComp(fam, col.c)}</b>
-      <span class="readout__cusp">cusp ${fmtComp(fam, peakC)}</span>
+      <span class="readout__cusp">cusp <b>${fmtComp(fam, peakC)}</b></span>
       ${over ? '<span class="readout__flag">out of gamut</span>' : ''}
     </div>`;
 }
@@ -164,8 +164,10 @@ function render(v: ControlValues): void {
   const okhsl = okhslCoords(fam, h, Math.min(relC, 1), tParam);
   const hexOkhsl = okhslHex(h, Math.min(relC, 1), tParam);
 
-  // Theme the page with nutelch's live color.
+  // Theme the page with nutelch's live color, plus a contrasting ink for text
+  // drawn on top of it (e.g. selection) — chosen from the color's lightness.
   root.style.setProperty('--live', cssNut);
+  root.style.setProperty('--live-ink', t > 0.6 ? 'oklch(0.18 0 0)' : 'oklch(0.97 0 0)');
 
   swNut.style.background = cssNut;
   swPct.style.background = cssPct;
