@@ -1,4 +1,4 @@
-import { cusp, relch, toe, toeInv, type Mode } from '../index';
+import { cusp, relch, toCss, toe, toeInv, type Mode } from '../index';
 import { oklchSrgb, oklchP3, lchSrgb, lchP3 } from '../luts';
 import {
   buildControls,
@@ -89,7 +89,6 @@ const fmtComp = (fam: Family, v: number) => (fam === 'ok' ? v.toFixed(4) : v.toF
 
 function renderReadout(
   col: { mode: Mode; l: number; c: number; h: number },
-  cssStr: string,
   fam: Family,
   relC: number,
   peakC: number,
@@ -106,8 +105,7 @@ function renderReadout(
       relC <b>${relC.toFixed(3)}</b> → C <b>${fmtComp(fam, col.c)}</b>
       <span class="readout__cusp">cusp ${fmtComp(fam, peakC)}</span>
       ${over ? '<span class="readout__flag">out of gamut</span>' : ''}
-    </div>
-    <code class="readout__css">${cssStr}</code>`;
+    </div>`;
 }
 
 // The live, copy-pasteable snippet that reproduces the current color. Shows the
@@ -116,9 +114,15 @@ function renderCode(lutName: string, fam: Family, l: number, relC: number, h: nu
   const lArg = fam === 'ok' ? l.toFixed(4) : l.toFixed(2);
   const cArg = relC.toFixed(fam === 'ok' ? 4 : 3);
   codeHost.textContent =
-    `import { relch, ${lutName} } from 'nutelch';\n\n` +
-    `relch({ lut: ${lutName}, l: ${lArg}, relC: ${cArg}, h: ${Math.round(h)} });\n` +
-    `// → ${cssStr}`;
+    `import { relch, toCss, ${lutName} } from 'nutelch';\n\n` +
+    `const color = relch({\n` +
+    `  lut: ${lutName},\n` +
+    `  l: ${lArg},\n` +
+    `  relC: ${cArg},\n` +
+    `  h: ${Math.round(h)},\n` +
+    `});\n` +
+    `// → { mode, l, c, h }\n\n` +
+    `toCss(color); // "${cssStr}"`;
 }
 
 function render(v: ControlValues): void {
@@ -152,10 +156,10 @@ function render(v: ControlValues): void {
   if (handle) handle.setRange('cuspRay', { value: cuspS });
 
   // nutelch (center): relC relative to the cusp, with the chosen curves.
-  const cssNut = css(fam, t, col.c, h);
+  const cssNut = toCss(col); // dogfood the lib's CSS helper
   // raw percentage: chroma as an absolute CSS fraction (ignores the cusp), same lightness.
   const cPct = relCe * PCT_REF(fam);
-  const cssPct = css(fam, t, cPct, h);
+  const cssPct = toCss({ mode: col.mode, l: lEased, c: cPct, h });
   // OkHSL: pure reference — its own model, fed the RAW params (no nutelch curves).
   const okhsl = okhslCoords(fam, h, Math.min(relC, 1), tParam);
   const hexOkhsl = okhslHex(h, Math.min(relC, 1), tParam);
@@ -169,7 +173,7 @@ function render(v: ControlValues): void {
 
   bnPct.textContent = fam === 'ok' ? 'oklch %' : 'lch %';
 
-  renderReadout(col, cssNut, fam, relC, peakC);
+  renderReadout(col, fam, relC, peakC);
   renderCode(LUT_NAME[mode][gamut], fam, lEased, relCe, h, cssNut);
 
   renderSlice(sliceHost, {

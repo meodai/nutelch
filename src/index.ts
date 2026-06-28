@@ -46,6 +46,16 @@ export function relch({ lut, l, relC, h }: RelchInput): Color {
   return { mode: lut.mode, l, c: relC * maxChroma(lut, l, h), h };
 }
 
+// Format a Color (the shape cusp/relch/peak/reach return) as a CSS color string
+// in its own space. Trailing float noise is trimmed; oklch L is 0..1, lch L is a
+// percentage.
+export function toCss({ mode, l, c, h }: Color): string {
+  const n = (v: number, d: number) => String(+v.toFixed(d));
+  return mode === 'oklch'
+    ? `oklch(${n(l, 4)} ${n(c, 4)} ${n(h, 2)})`
+    : `lch(${n(l, 2)}% ${n(c, 2)} ${n(h, 2)})`;
+}
+
 // The cusp: the most chromatic color of a hue — the peak of the gamut shell over
 // ALL lightness (unlike cusp(), which is the max chroma at one given lightness).
 // The boundary is piecewise-linear in L between LUT rows, so its maximum lands on

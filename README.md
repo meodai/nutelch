@@ -86,6 +86,8 @@ toLab(relch({ lut: oklchSrgb, l: 0.6, relC: 1, h: 30 }));
 - `reach({ lut, l, reach, h })` → saturation along the ray from the achromatic anchor at
   `l` to the cusp. `reach` 0 = that gray, 1 = the cusp (overshoot allowed). Moves `l` and
   `c` together — the complement to `relch`.
+- `toCss(color)` → a CSS string in the color's own space (`oklch(l c h)` / `lch(l% c h)`),
+  float noise trimmed. Pass it the object `cusp`/`relch`/`peak`/`reach` return.
 - `toLab({ l, c, h })` → `{ l, a, b }` — rectangular conversion for `oklab()`/`lab()` output.
 - `toe(x)` / `toeInv(x)` → Ottosson's lightness toe and its inverse (the OkHSL `Lr`
   remap), both mapping `[0,1]→[0,1]`. Opt-in utilities — feed `toeInv` to a lightness

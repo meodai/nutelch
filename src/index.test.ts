@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { clampChroma } from 'culori';
-import { cusp, relch, peak, reach, toLab, oklchSrgb, oklchP3, lchSrgb, lchP3 } from './index';
+import { cusp, relch, peak, reach, toCss, toLab, oklchSrgb, oklchP3, lchSrgb, lchP3 } from './index';
 
 // Ground-truth boundary chroma via culori, matching the build script.
 function actualMax(mode: 'oklch' | 'lch', l: number, h: number, rgbGamut: string, ceiling: number) {
@@ -120,6 +120,21 @@ describe('reach', () => {
 
   it('carries the LUT mode', () => {
     expect(reach({ lut: lchSrgb, l: 30, reach: 0.5, h: 142 }).mode).toBe('lch');
+  });
+});
+
+describe('toCss', () => {
+  it('formats oklch in its own space', () => {
+    expect(toCss({ mode: 'oklch', l: 0.72, c: 0.12, h: 142 })).toBe('oklch(0.72 0.12 142)');
+  });
+  it('formats lch with a percentage lightness', () => {
+    expect(toCss({ mode: 'lch', l: 60, c: 30, h: 142 })).toBe('lch(60% 30 142)');
+  });
+  it('trims floating-point noise', () => {
+    expect(toCss({ mode: 'oklch', l: 0.7200001, c: 0.12, h: 142.00001 })).toBe('oklch(0.72 0.12 142)');
+  });
+  it('round-trips a relch result into a usable string', () => {
+    expect(toCss(relch({ lut: oklchSrgb, l: 0.6, relC: 0.5, h: 30 }))).toMatch(/^oklch\([\d.]+ [\d.]+ \d+(\.\d+)?\)$/);
   });
 });
 
