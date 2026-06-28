@@ -189,3 +189,12 @@ npm test
 npm run dev          # interactive cusp explorer (compares LUT vs actual vs OkHSL)
 npm run build:lib    # publishable dist/
 ```
+
+## Acknowledgements
+
+The core idea — measuring chroma relative to the gamut cusp — and much of the guidance
+shaping this library are thanks to [Matt DesLauriers](https://github.com/mattdesl).
+
+## License
+
+[MIT](./LICENSE) © David Aerne
