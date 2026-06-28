@@ -221,7 +221,7 @@ body {
   max-width: 55ch;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.9rem 1.4rem;
+  gap: 3rem;
 }
 
 .brag li {
