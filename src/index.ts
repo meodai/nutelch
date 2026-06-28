@@ -19,6 +19,16 @@ export interface RelchInput {
   relC: number;
   h: number;
 }
+export interface PeakInput {
+  lut: Lut;
+  h: number;
+}
+export interface ReachInput {
+  lut: Lut;
+  l: number; // achromatic anchor lightness (native scale)
+  reach: number; // 0 = the gray at l, 1 = the cusp (overshoot allowed)
+  h: number;
+}
 export type Color = { mode: Mode; l: number; c: number; h: number };
 
 // The color sitting on the gamut shell at (l, h). `.c` is the raw max chroma.
@@ -32,4 +42,33 @@ export function cusp({ lut, l, h }: CuspInput): Color {
 // calling — e.g. relch({ lut, l: ease(t) * lut.lMax, relC: ease(x), h }).
 export function relch({ lut, l, relC, h }: RelchInput): Color {
   return { mode: lut.mode, l, c: relC * maxChroma(lut, l, h), h };
+}
+
+// The cusp: the most chromatic color of a hue — the peak of the gamut shell over
+// ALL lightness (unlike cusp(), which is the max chroma at one given lightness).
+// The boundary is piecewise-linear in L between LUT rows, so its maximum lands on
+// a row node — scanning the rows finds it exactly.
+export function peak({ lut, h }: PeakInput): Color {
+  let bestL = 0;
+  let bestC = -1;
+  for (let i = 0; i < lut.lSteps; i++) {
+    const l = (i / (lut.lSteps - 1)) * lut.lMax;
+    const c = maxChroma(lut, l, h);
+    if (c > bestC) {
+      bestC = c;
+      bestL = l;
+    }
+  }
+  return { mode: lut.mode, l: bestL, c: bestC, h };
+}
+
+// Saturation along the ray from an achromatic anchor to the hue's cusp — the
+// complement to relch. relch holds lightness and scales chroma to the shell AT
+// that L; reach slides L and C together toward the cusp (a shade line). `l` is
+// the gray you land on at reach 0; reach 1 is the cusp. The path is a straight
+// ray and constant-hue slices aren't perfectly convex, so reach in [0,1] is NOT
+// a hard gamut guarantee; reach > 1 overshoots past the cusp, as relch overshoots.
+export function reach({ lut, l, reach, h }: ReachInput): Color {
+  const tip = peak({ lut, h });
+  return { mode: lut.mode, l: l + reach * (tip.l - l), c: reach * tip.c, h };
 }

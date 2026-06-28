@@ -177,6 +177,14 @@ body {
   stroke-dasharray: 2 2;
 }
 
+/* The cusp ray — the line the "cusp reach" slider drags the dot along. */
+.ray {
+  stroke: var(--ink);
+  stroke-width: 1.25;
+  stroke-dasharray: 5 3;
+  opacity: 0.5;
+}
+
 .dot-halo {
   fill: oklch(1 0 0 / 0.18);
 }

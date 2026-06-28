@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { clampChroma } from 'culori';
-import { cusp, relch, toLab, oklchSrgb, oklchP3, lchSrgb, lchP3 } from './index';
+import { cusp, relch, peak, reach, toLab, oklchSrgb, oklchP3, lchSrgb, lchP3 } from './index';
 
 // Ground-truth boundary chroma via culori, matching the build script.
 function actualMax(mode: 'oklch' | 'lch', l: number, h: number, rgbGamut: string, ceiling: number) {
@@ -60,6 +60,66 @@ describe('relch', () => {
     expect(a.c).toBeCloseTo(b.c, 6);
     const p3 = relch({ lut: oklchP3, l: 0.6, relC: 1, h: 30 });
     expect(p3.c).toBeGreaterThanOrEqual(b.c - 1e-6); // P3 boundary >= sRGB
+  });
+});
+
+describe('peak', () => {
+  it('returns {mode,l,c,h}, the most chromatic color of the hue', () => {
+    const p = peak({ lut: oklchSrgb, h: 30 });
+    expect(p.mode).toBe('oklch');
+    expect(p.h).toBe(30);
+    expect(p.c).toBeGreaterThan(0);
+    expect(p.l).toBeGreaterThan(0);
+    expect(p.l).toBeLessThan(oklchSrgb.lMax);
+  });
+
+  it('is the max chroma over all lightness (>= the per-L cusp anywhere)', () => {
+    const p = peak({ lut: oklchSrgb, h: 30 });
+    for (const l of [0.1, 0.3, 0.5, 0.7, 0.9]) {
+      expect(p.c).toBeGreaterThanOrEqual(cusp({ lut: oklchSrgb, l, h: 30 }).c - 1e-9);
+    }
+  });
+
+  it('matches a fine scan of the boundary', () => {
+    let best = 0;
+    for (let i = 0; i <= 2000; i++) best = Math.max(best, cusp({ lut: oklchSrgb, l: i / 2000, h: 30 }).c);
+    expect(peak({ lut: oklchSrgb, h: 30 }).c).toBeCloseTo(best, 6);
+  });
+
+  it('uses the LUT scale (lch L on 0..100) and tracks the wider P3 gamut', () => {
+    expect(peak({ lut: lchSrgb, h: 30 }).l).toBeGreaterThan(1);
+    expect(peak({ lut: oklchP3, h: 30 }).c).toBeGreaterThanOrEqual(peak({ lut: oklchSrgb, h: 30 }).c - 1e-6);
+  });
+});
+
+describe('reach', () => {
+  it('reach 0 is the achromatic anchor (c=0 at the given lightness)', () => {
+    const r = reach({ lut: oklchSrgb, l: 0.3, reach: 0, h: 142 });
+    expect(r.c).toBe(0);
+    expect(r.l).toBeCloseTo(0.3, 9);
+  });
+
+  it('reach 1 lands exactly on the cusp', () => {
+    const tip = peak({ lut: oklchSrgb, h: 142 });
+    const r = reach({ lut: oklchSrgb, l: 0.3, reach: 1, h: 142 });
+    expect(r.l).toBeCloseTo(tip.l, 9);
+    expect(r.c).toBeCloseTo(tip.c, 9);
+  });
+
+  it('reach 0.5 is the midpoint of the anchor→cusp ray', () => {
+    const tip = peak({ lut: oklchSrgb, h: 142 });
+    const r = reach({ lut: oklchSrgb, l: 0.3, reach: 0.5, h: 142 });
+    expect(r.l).toBeCloseTo(0.3 + 0.5 * (tip.l - 0.3), 9);
+    expect(r.c).toBeCloseTo(0.5 * tip.c, 9);
+  });
+
+  it('allows overshoot past the cusp (like relch)', () => {
+    const tip = peak({ lut: oklchSrgb, h: 142 });
+    expect(reach({ lut: oklchSrgb, l: 0.3, reach: 1.2, h: 142 }).c).toBeCloseTo(1.2 * tip.c, 9);
+  });
+
+  it('carries the LUT mode', () => {
+    expect(reach({ lut: lchSrgb, l: 30, reach: 0.5, h: 142 }).mode).toBe('lch');
   });
 });
 

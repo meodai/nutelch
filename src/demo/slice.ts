@@ -14,6 +14,8 @@ export interface SliceInput {
   pctLabel?: string; // label for that point (e.g. "oklch%")
   okhslPoint?: SlicePoint | null; // where OkHSL places the current color
   okhslLabel?: string;
+  cusp?: { t: number; c: number } | null; // global cusp; if given, used for marker + ray
+  rayAnchorT?: number | null; // c=0 intercept of the current point's cusp ray
 }
 
 const W = 540;
@@ -36,6 +38,8 @@ function niceStep(max: number): number {
 export function renderSlice(host: HTMLElement, input: SliceInput): void {
   const { hue, lMax, cssColor, lutEnvelope, cmax, point, pctPoint, pctLabel, okhslPoint, okhslLabel } =
     input;
+  const cuspGiven = input.cusp ?? null;
+  const rayAnchorT = input.rayAnchorT ?? null;
   const Y = (t: number) => PAD.t + (1 - t) * PLOT_H;
   const X = (c: number) => PAD.l + (cmax > 0 ? c / cmax : 0) * PLOT_W;
 
@@ -77,20 +81,22 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
   };
   const lutLine = `<polyline class="env env--lut" points="${fmtPts(sample(lutEnvelope))}"/>`;
 
-  let cuspT = 0;
-  let cuspC = 0;
-  for (let i = 0; i <= STEPS; i++) {
-    const t = i / STEPS;
-    const c = lutEnvelope(t);
-    if (c > cuspC) {
-      cuspC = c;
-      cuspT = t;
+  let cuspT = cuspGiven?.t ?? 0;
+  let cuspC = cuspGiven?.c ?? 0;
+  if (!cuspGiven) {
+    for (let i = 0; i <= STEPS; i++) {
+      const t = i / STEPS;
+      const c = lutEnvelope(t);
+      if (c > cuspC) {
+        cuspC = c;
+        cuspT = t;
+      }
     }
   }
   const cuspLabel = lMax === 1 ? cuspC.toFixed(3) : Math.round(cuspC).toString();
   const cuspMark = `<g class="cusp">
       <circle cx="${f(X(cuspC))}" cy="${f(Y(cuspT))}" r="4.5"/>
-      <text x="${f(X(cuspC) - 9)}" y="${f(Y(cuspT) + 4)}" text-anchor="end">cusp ${cuspLabel}</text>
+      <text x="${f(X(cuspC) + 9)}" y="${f(Y(cuspT) + 4)}" text-anchor="start">cusp ${cuspLabel}</text>
     </g>`;
 
   // Lightness gridlines, labelled in native units.
@@ -135,6 +141,16 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
       <text class="dot-okhsl-label" x="${f(px)}" y="${f(py + 16)}" text-anchor="middle">${okhslLabel ?? 'okhsl'}</text>`;
   }
 
+  // The cusp ray: the line the "cusp reach" slider drags along, from the
+  // achromatic anchor (c=0) through the dot to the cusp. Clipped to the plot so
+  // an anchor that lands off-axis doesn't draw over the labels.
+  let ray = '';
+  if (rayAnchorT !== null && cuspC > 0) {
+    ray = `<line class="ray" clip-path="url(#plot-clip)"
+      x1="${f(X(0))}" y1="${f(Y(rayAnchorT))}"
+      x2="${f(X(cuspC))}" y2="${f(Y(cuspT))}"/>`;
+  }
+
   // nutColor's current point with crosshair guides.
   let marker = '';
   if (point) {
@@ -149,11 +165,14 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
   host.innerHTML = `
     <svg viewBox="0 0 ${W} ${H}" class="slice" role="img"
          aria-label="gamut shell cross-section at hue ${Math.round(hue)} degrees">
-      <defs>${defs}</defs>
+      <defs>${defs}
+        <clipPath id="plot-clip"><rect x="${PAD.l}" y="${PAD.t}" width="${PLOT_W}" height="${PLOT_H}"/></clipPath>
+      </defs>
       <text class="slice__title" x="${PAD.l}" y="20">gamut shell · hue ${Math.round(hue)}°</text>
       ${lTicks}
       ${fill}
       ${lutLine}
+      ${ray}
       ${cuspMark}
       ${okhslMarker}
       ${pctMarker}

@@ -59,6 +59,16 @@ relch({ lut: oklchSrgb, l: 0.6, relC: 0.5, h: 30 });
 relch({ lut: lchP3, l: 60, relC: 1, h: 30 });
 // → { mode: 'lch', l: 60, c: …, h: 30 }
 
+// The cusp — the most chromatic color of a hue (peak of the shell over all L):
+peak({ lut: oklchSrgb, h: 30 });
+// → { mode: 'oklch', l: 0.65…, c: 0.18…, h: 30 }  (its own lightness)
+
+// reach: the OkHSV-flavored complement to relch. relC holds L and scales chroma
+// to the shell at that L; reach slides L and C together along the ray from a gray
+// anchor toward the cusp — a perceptual "shade line". `l` is the gray at reach 0:
+reach({ lut: oklchSrgb, l: 0.3, reach: 1, h: 30 });   // === peak (the cusp)
+reach({ lut: oklchSrgb, l: 0.3, reach: 0.5, h: 30 }); // halfway from gray L=0.3 to the cusp
+
 // Need rectangular a/b (for oklab()/lab() output)? Convert the result:
 toLab(relch({ lut: oklchSrgb, l: 0.6, relC: 1, h: 30 }));
 // → { l: 0.6, a: …, b: … }
@@ -67,9 +77,15 @@ toLab(relch({ lut: oklchSrgb, l: 0.6, relC: 1, h: 30 }));
 ### API
 
 - `cusp({ lut, l, h })` → the color on the shell at `(l, h)`. `.c` is the raw max in-gamut
-  chroma.
+  chroma **at that lightness**.
 - `relch({ lut, l, relC, h })` → resolves `relC` (0..1 of the way to the shell; overshoot
-  allowed) to an absolute color.
+  allowed) to an absolute color. Holds `l`, scales chroma.
+- `peak({ lut, h })` → the **cusp**: the most chromatic color of the hue (the peak of the
+  shell over *all* lightness). Carries its own `.l`. Distinct from `cusp()`, which is the
+  max at one given `l`.
+- `reach({ lut, l, reach, h })` → saturation along the ray from the achromatic anchor at
+  `l` to the cusp. `reach` 0 = that gray, 1 = the cusp (overshoot allowed). Moves `l` and
+  `c` together — the complement to `relch`.
 - `toLab({ l, c, h })` → `{ l, a, b }` — rectangular conversion for `oklab()`/`lab()` output.
 
 The returned `mode` and the lightness range come from the LUT you pass. The available
@@ -84,6 +100,36 @@ LUTs are named `<space><Gamut>`:
 
 Import only the LUTs you need (each is tree-shakeable; the package is side-effect-free).
 Input is always cylindrical (`l`, `h`, `relC`); `H` is `0..360` and wraps.
+
+### `reach`: saturating toward the cusp
+
+`reach` is the geometric complement to `relch`. Picture the hue's constant-hue slice
+with two points:
+
+- **A** — your current color's `(L, C)`
+- **B** — the **cusp** (`peak`), the hue's most chromatic color
+
+Take the direction `normalize(B − A)` and slide along it: toward **B** is more
+saturated, away from it less, until the ray hits the achromatic axis (`C = 0`) at a
+gray. That 1-D move *is* `reach` — `reach: 1` is the cusp, `reach: 0` is the gray the
+ray lands on. The API names that gray directly (`l`), since two endpoints fix the ray:
+
+```js
+reach({ lut: oklchSrgb, l: 0.3, reach: 0.8, h: 142 }); // 80% from gray L=0.3 toward the cusp
+```
+
+This is close to how **OkHSL** saturates — but without OkHSL's rectangle-squashing of
+the gamut and without its `Lr` lightness prediction (the toe). Same "more/less
+saturated along a perceptual line" feel, expressed natively in `oklch()`.
+
+The cost of *not* squashing: the path is a straight line, and constant-hue slices
+aren't perfectly convex, so a ray can bulge slightly out of gamut between the gray and
+the cusp (worst case measured ≈ `0.024` chroma, for a near-white anchor). **`reach ≤ 1`
+is not a gamut guarantee** — if you need one, check `cusp()` at the result's `L`.
+
+> Because it's just "move along a direction," you can swap the straight line for a
+> *curve* — bending the path to hug the shell, or to mimic OkHSL's motion more
+> closely. Same entry point, richer trajectories.
 
 ### Curves / easing
 

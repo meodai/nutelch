@@ -8,6 +8,7 @@ import {
 } from './controls';
 import { renderSlice } from './slice';
 import { okhslHex, okhslCoords } from './actual';
+import { findCusp, sFromPoint, rayAnchorT, pointAtS, invertEase } from './cuspray';
 
 type Family = 'ok' | 'cie';
 type Gamut = 'srgb' | 'display-p3';
@@ -66,7 +67,8 @@ const fmtL = (v: number) => (lMax === 1 ? v.toFixed(3) : Math.round(v).toString(
 
 const ranges: RangeSpec[] = [
   { key: 'l', label: 'lightness', min: 0, max: 1, step: 0.001, value: 0.72, format: fmtL },
-  { key: 'relC', label: 'relC · saturation', min: 0, max: 1.5, step: 0.005, value: 1, format: (v) => v.toFixed(3) },
+  { key: 'relC', label: 'relC · saturation', min: 0, max: 1, step: 0.005, value: 1, format: (v) => v.toFixed(3) },
+  { key: 'cuspRay', label: 'cusp reach', min: 0, max: 1, step: 0.005, value: 1, format: (v) => v.toFixed(3) },
   { key: 'h', label: 'hue', min: 0, max: 360, step: 1, value: 142, format: (v) => `${Math.round(v)}°` },
 ];
 
@@ -136,6 +138,15 @@ function render(v: ControlValues): void {
   const col = relch({ lut, l: lEased, relC: relCe, h });
   const peakC = cusp({ lut, l: lEased, h }).c;
 
+  // Global cusp (peak chroma over all L) for this hue, in plot space, plus the
+  // current dot's ray. Feeds the slice's ray line and keeps the "cusp reach"
+  // slider thumb in sync as L/relC move.
+  const env = (tt: number) => cusp({ lut, l: tt * lMaxOf(fam), h }).c;
+  const peakCusp = findCusp(env);
+  const cuspS = sFromPoint(col.c, peakCusp);
+  const anchorT = rayAnchorT(t, col.c, peakCusp);
+  if (handle) handle.setRange('cuspRay', { value: cuspS });
+
   // nutelch (center): relC relative to the cusp, with the chosen curves.
   const cssNut = css(fam, t, col.c, h);
   // raw percentage: chroma as an absolute CSS fraction (ignores the cusp), same lightness.
@@ -165,17 +176,65 @@ function render(v: ControlValues): void {
     lMax: lMaxOf(fam),
     cssColor: (tt, c) => css(fam, tt, c, h),
     lutEnvelope: (tt) => cusp({ lut, l: tt * lMaxOf(fam), h }).c,
-    cmax: Math.max(peakC, col.c, cPct, lMaxOf(fam) === 1 ? 0.05 : 5) * 1.15,
+    // Pin the chroma axis to the hue's global cusp (and the % reference) so it
+    // stays put while you drag L / relC / cusp-reach — only hue rescales it.
+    cmax: Math.max(peakCusp.c, PCT_REF(fam), lMaxOf(fam) === 1 ? 0.05 : 5) * 1.15,
     point: { l: t, c: col.c },
     pctPoint: { l: t, c: cPct },
     pctLabel: fam === 'ok' ? 'oklch%' : 'lch%',
     // OkHSL is an sRGB + OK model — only place its point on the OK/sRGB slice.
     okhslPoint: fam === 'ok' && gamut === 'srgb' ? { l: okhsl.t, c: okhsl.c } : null,
     okhslLabel: 'okhsl',
+    cusp: peakCusp,
+    rayAnchorT: anchorT,
   });
 }
 
-const handle = buildControls(controlsHost, ranges, selects, (v, changed) => {
+// Declared up front (not `const handle = ...`) so render(), which buildControls
+// calls synchronously via emit('init'), can reference it without hitting the TDZ.
+let handle: ReturnType<typeof buildControls>;
+
+// Translate a "cusp reach" slider value into raw L + relC along the current
+// point's ray, inverting whatever easing curves are active so the dot tracks the
+// ray on screen. Mutates the L/relC sliders, then re-renders.
+function applyCuspRay(v: ControlValues): void {
+  const mode = v.choices.mode as Mode;
+  const fam = familyOf(mode);
+  const gamut = v.choices.gamut as Gamut;
+  const lut = LUTS[mode][gamut];
+  const h = v.values.h ?? 0;
+  const env = (tt: number) => cusp({ lut, l: tt * lMaxOf(fam), h }).c;
+  const peakCusp = findCusp(env);
+
+  const easeL = EASE[v.choices.curveL ?? 'linear'] ?? id;
+  const easeC = EASE[v.choices.curveC ?? 'linear'] ?? id;
+
+  // Current plotted (eased) point, so the ray is anchored where the dot is now.
+  const tParam = lMaxOf(fam) === 1 ? (v.values.l ?? 0) : (v.values.l ?? 0) / 100;
+  const tNow = Math.min(Math.max(easeL(tParam), 0), 1);
+  const relCnow = v.values.relC ?? 1;
+  const relCeNow = easeC(Math.min(relCnow, 1)) + Math.max(relCnow - 1, 0);
+  const cNow = relCeNow * env(tNow);
+
+  const anchorT = rayAnchorT(tNow, cNow, peakCusp);
+  const target = pointAtS(v.values.cuspRay ?? 1, anchorT, peakCusp);
+
+  // Back to raw slider values (undo the easing).
+  const rawL = invertEase(easeL, target.t) * lMaxOf(fam);
+  const envAtT = env(target.t);
+  const relCactual = envAtT > 1e-9 ? target.c / envAtT : 0;
+  const rawRelC = relCactual <= 1 ? invertEase(easeC, relCactual) : 1 + (relCactual - 1);
+
+  handle.setRange('l', { value: rawL });
+  handle.setRange('relC', { value: rawRelC });
+  render(handle.values());
+}
+
+handle = buildControls(controlsHost, ranges, selects, (v, changed) => {
+  if (changed === 'cuspRay') {
+    applyCuspRay(v);
+    return;
+  }
   const newFamily = familyOf(v.choices.mode as Mode);
   // Switching model family rescales the lightness slider to the native L range,
   // preserving relative position. setRange patches in place (no rebuild), so
