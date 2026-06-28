@@ -41,7 +41,9 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
 
   // The shell itself, filled with real gamut colors: each lightness column is a
   // vertical gradient from neutral (chroma 0, bottom) up to the boundary color.
-  const ROWS = 56;
+  // The column is a single lightness, so the count sets how finely the *lightness*
+  // (horizontal) axis is sampled — high enough that the steps read as continuous.
+  const ROWS = 180;
   let defs = '';
   let fill = '';
   for (let i = 0; i < ROWS; i++) {
