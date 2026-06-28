@@ -42,7 +42,7 @@ npm install nutelch
 ## Usage
 
 ```js
-import { cusp, relch, toLab, oklchSrgb, lchP3 } from 'nutelch';
+import { cusp, relch, toCss, toLab, oklchSrgb, lchP3 } from 'nutelch';
 
 // You pass the gamut LUT you want; it carries the space (mode) + lightness range.
 // Import only the ones you use — the rest are tree-shaken away.
@@ -53,7 +53,11 @@ cusp({ lut: oklchSrgb, l: 0.6, h: 30 });
 
 // Chroma as a fraction of the way to the shell:
 relch({ lut: oklchSrgb, l: 0.6, relC: 0.5, h: 30 });
-// → { mode: 'oklch', l: 0.6, c: 0.06…, h: 30 }  (half the max chroma)
+// → { mode: 'oklch', l: 0.6, c: 0.06…, h: 30 }
+
+// Every call returns a plain { mode, l, c, h }. Turn it into CSS with toCss:
+toCss(relch({ lut: oklchSrgb, l: 0.6, relC: 0.5, h: 30 }));
+// → "oklch(0.6 0.06 30)"  (half the max chroma)
 
 // A different space + gamut is just a different LUT. LCH (CIE) uses L on 0..100:
 relch({ lut: lchP3, l: 60, relC: 1, h: 30 });

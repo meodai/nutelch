@@ -101,31 +101,29 @@ body {
 
 /* ── masthead ─────────────────────────────────────────────── */
 .masthead {
-  margin-bottom: clamp(1.5rem, 4vw, 3rem);
   text-align: center;
+  font-size: min(10vw, 15rem);
+  margin: 0 0 .5em;
 }
 
 .wordmark {
   font-family: var(--sans);
-  font-weight: 200; /* extra light title */
-  font-size: 12vw;
+  font-weight: 300;
   line-height: 0.92;
-  letter-spacing: -0.03em;
+  font-size: .8em;
+  letter-spacing: 0.01em;
   margin: 0;
 }
 
 .wordmark span {
   color: var(--live);
-  font-weight: 300;
   transition: color 0.4s ease;
 }
 
 .tagline {
-  margin: -1.25em 0 0;
-  color: var(--ink-dim);
-  font-family: var(--mono);
-  font-size: 1.2vw; /* scales with the wordmark (12vw) */
-  font-weight: 200; /* extra light subtitle */
+  margin: -.25em 0 0;
+  font-size: .15em;
+  font-weight: 300;
   letter-spacing: 0.04em;
 }
 
@@ -378,8 +376,9 @@ body {
 }
 
 .swatch__label b {
-  font-size: var(--fs-label);
-  font-weight: 700;
+  font-family: var(--mono);
+  font-size: var(--fs-small);
+  font-weight: 500;
   letter-spacing: 0.08em;
   color: var(--ink);
 }
