@@ -72,6 +72,32 @@
   color: var(--live-ink, var(--bg));
 }
 
+/* scrollbar tinted with the live color (Firefox + standard) */
+html {
+  scrollbar-color: var(--live) transparent;
+  scrollbar-width: thin;
+}
+
+/* WebKit scrollbar */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--live);
+  border: 3px solid var(--bg); /* inset padding so the thumb reads as a slim bar */
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink);
+}
+
 html,
 body {
   margin: 0;
