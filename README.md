@@ -144,29 +144,40 @@ is not a gamut guarantee** — if you need one, check `cusp()` at the result's `
 
 ### Curves / easing
 
-nutelch's response is **linear** and ships **no easing functions** — that's deliberate.
-Easing is a 1-D remap of an input, so apply your own (or any easing library) to whatever
-axis you want, before the call:
+nutelch's response is **linear** by design. Easing is just a 1-D remap of an input, so
+apply your own (or any easing library) to whatever axis you want, before the call:
 
 ```js
-import { relch, oklchSrgb } from 'nutelch';
-const easeIn = (x) => x * x;
+import { relch, smoothstep, oklchSrgb } from 'nutelch';
 
 // curve the saturation response:
-relch({ lut: oklchSrgb, l: 0.7, relC: easeIn(0.5), h: 30 });
+relch({ lut: oklchSrgb, l: 0.7, relC: smoothstep(0.5), h: 30 });
 // curve lightness (e.g. toward an HSL-like ramp):
-relch({ lut: oklchSrgb, l: easeIn(0.7), relC: 1, h: 30 });
+relch({ lut: oklchSrgb, l: smoothstep(0.7), relC: 1, h: 30 });
 ```
 
 A well-behaved ease maps `0→0` and `1→1`, so `relC: 1` still lands exactly on the shell.
+The lib ships exactly one general curve — [`smoothstep`](#api) — because it's the one
+everyone reaches for; bring your own for anything else.
 
-The one remap the lib *does* ship is the perceptual lightness **toe** (it's not a generic
-easing — it's the specific curve OkHSL uses for its `Lr`). Apply `toeInv` to lightness to
-match OkHSL's lightness exactly, while keeping nutelch's boundary-relative chroma:
+#### Why `toeInv`?
+
+OKLab's `L` is **not perceptually even for picking lightness** — equal steps in `L` don't
+read as equal steps in perceived lightness, especially in the darks. Ottosson's OkHSL
+fixes this with a *reference lightness* `Lr`: it remaps `L` through the **`toe`** function
+so `Lr` tracks perceived lightness (and CIE `L*`) more closely, then uses `Lr` as its
+lightness axis. nutelch deliberately keeps the **raw OKLab `L`** (so a nutelch color is a
+plain `oklch()` color).
+
+So when you want OkHSL-style, perceptually-even lightness, **dial your `0..1` value as
+`Lr` and pass it through `toeInv` (`Lr → L`)** before `relch`. A linear ramp of your input
+then reads as an even lightness ramp — and matches OkHSL exactly:
 
 ```js
-import { relch, toeInv, oklchSrgb } from 'nutelch';
+import { relch, toe, toeInv, oklchSrgb } from 'nutelch';
+
 relch({ lut: oklchSrgb, l: toeInv(0.7), relC: 1, h: 30 }); // OkHSL-aligned lightness
+toe(0.5); // → 0.42…  the inverse direction (L → Lr), e.g. to label a color's lightness
 ```
 
 ## Development
