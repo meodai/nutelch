@@ -392,14 +392,10 @@ body {
 }
 
 .swatch__cell {
-  aspect-ratio: 1;
+  aspect-ratio: 2.5;
   background: var(--live);
-  transition: background-color 0.2s ease;
 }
 
-.swatch__cell--main {
-  box-shadow: inset 0 3px 0 var(--live);
-}
 
 /* labels sit below the swatches now — no scrim, page text colors */
 .swatch__label {
