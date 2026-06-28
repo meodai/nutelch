@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "description": "Chroma relative to the gamut shell (cusp) in OKLCH/LCH. Dependency-free, LUT-backed.",
   "type": "module",
+  "author": "David Aerne <meodai@gmail.com>",
   "license": "MIT",
   "sideEffects": false,
   "files": ["dist"],
@@ -24,7 +25,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build:lib"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
