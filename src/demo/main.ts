@@ -56,10 +56,8 @@ const codeHost = document.getElementById('code')!;
 const swOkhsl = document.getElementById('sw-okhsl')!;
 const swNut = document.getElementById('sw-nut')!;
 const swPct = document.getElementById('sw-pct')!;
-// labels live in a sibling under the shared .swatch__item, not inside the cell.
-const cvOkhsl = swOkhsl.closest('.swatch__item')!.querySelector('.cv')!;
-const cvNut = swNut.closest('.swatch__item')!.querySelector('.cv')!;
-const cvPct = swPct.closest('.swatch__item')!.querySelector('.cv')!;
+// the pct swatch's name flips with the family (oklch % / lch %); it lives in a
+// sibling under the shared .swatch__item, not inside the cell.
 const bnPct = swPct.closest('.swatch__item')!.querySelector('.bn')!;
 
 let family: Family = 'ok';
@@ -175,9 +173,6 @@ function render(v: ControlValues): void {
   swPct.style.background = cssPct;
   swOkhsl.style.background = hexOkhsl;
 
-  cvNut.textContent = compact(fam, t, col.c, h);
-  cvPct.textContent = compact(fam, t, cPct, h);
-  cvOkhsl.textContent = compact(fam, okhsl.t, okhsl.c, okhsl.h);
   bnPct.textContent = fam === 'ok' ? 'oklch %' : 'lch %';
 
   renderReadout(col, cssNut, fam, relC, peakC);
