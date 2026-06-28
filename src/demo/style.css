@@ -347,7 +347,7 @@ body {
 
 .swatch {
   display: flex;
-  gap: 0.4rem;
+  gap: 1px;
   margin-bottom: 3rem;
 }
 
