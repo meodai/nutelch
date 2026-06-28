@@ -290,11 +290,6 @@ body {
   stroke-width: 1.5;
 }
 
-.dot-pct.is-oog {
-  stroke: oklch(0.82 0.18 35);
-  stroke-width: 2;
-}
-
 /* every sample-point label: legible over any part of the colored shell via a
    dark halo painted behind the glyphs */
 .dot-label,
@@ -307,11 +302,6 @@ body {
   stroke: var(--label-halo);
   stroke-width: 3px;
   stroke-linejoin: round;
-}
-
-.dot-pct-label.is-oog {
-  fill: oklch(0.82 0.18 35);
-  font-weight: 700;
 }
 
 /* OkHSL point — same neutral treatment as the % point; the label tells them apart */
