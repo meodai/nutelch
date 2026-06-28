@@ -9,6 +9,7 @@ import {
 import { renderSlice } from './slice';
 import { okhslHex, okhslCoords, actualMaxChroma } from './actual';
 import { findCusp, sFromPoint, rayAnchorT, pointAtS, invertEase } from './cuspray';
+import pkg from '../../package.json';
 
 type Family = 'ok' | 'cie';
 type Gamut = 'srgb' | 'display-p3';
@@ -107,6 +108,9 @@ function buildWordmark(host: HTMLElement | null): void {
   host.innerHTML = stripeBand('figure') + stripeBand('field');
 }
 buildWordmark(document.getElementById('wordmark'));
+
+const versionEl = document.getElementById('version');
+if (versionEl) versionEl.textContent = `v${pkg.version}`;
 
 const controlsHost = document.getElementById('controls')!;
 const sliceHost = document.getElementById('slice')!;
