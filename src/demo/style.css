@@ -134,29 +134,41 @@ body {
 
 /* ── masthead ─────────────────────────────────────────────── */
 .masthead {
+  position: relative;
   text-align: center;
   font-size: min(10vw, 15rem);
-  margin: 0 0 .5em;
-}
-
-.wordmark {
-  font-family: var(--sans);
-  font-weight: 300;
-  line-height: 0.92;
-  font-size: .8em;
-  letter-spacing: 0.01em;
   margin: 0;
 }
 
-.wordmark span {
-  color: var(--live);
-  transition: color 0.4s ease;
+.wordmark {
+  /* break out of the centered content column so the stripes bleed edge to edge,
+     and pull up by #app's top padding so the band sits flush at the page top */
+  display: grid; /* overlay the two bands in one cell */
+  width: 100vw;
+  margin: calc(clamp(1.5rem, 4vw, 4rem) * -1) 0 0 calc(50% - 50vw);
+  line-height: 0;
+  color: var(--live); /* stripe fill (currentColor in the SVG) */
+}
+
+.wordmark-svg {
+  grid-area: 1 / 1; /* both bands stack exactly */
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* the word used inside the SVG masks (fill set per layer) */
+.wm-text {
+  font-family: var(--sans);
+  font-weight: 800;
+  font-size: 230px;
+  letter-spacing: -0.01em;
 }
 
 .tagline {
-  margin: -.25em 0 0;
+  margin: -3em 0 5rem;
   font-size: .15em;
-  font-weight: 300;
+  font-weight: 500;
   letter-spacing: 0.04em;
 }
 
@@ -194,7 +206,7 @@ body {
 
 .brag {
   list-style: none;
-  margin: 1.2rem 0 0;
+  margin: 3rem 0 0;
   padding: 0;
   max-width: 55ch;
   display: grid;
@@ -247,6 +259,7 @@ body {
 
 .slice-host {
   display: block;
+  margin-bottom: 3rem;
 }
 
 .slice {

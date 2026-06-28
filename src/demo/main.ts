@@ -49,6 +49,65 @@ const EASE: Record<string, (x: number) => number> = {
 const EASE_NAMES = Object.keys(EASE);
 
 const root = document.documentElement;
+// Masthead wordmark: a tapered line-screen (thick at top → thin at bottom) with
+// the title knocked OUT of it via an SVG mask. Inline SVG so the web font loads;
+// stripes use currentColor so they follow --live.
+const WM_W = 1400;
+const WM_H = 300;
+const WM_N = 42;
+const WM_DUTY = 0.9; // bar weight as a fraction of the pitch (lower = lighter bars)
+const WM_FADE = 0.6; // where the tail starts easing to zero (fraction of the band)
+const WM_STROKE = 2; // figure bar stroke at full weight; scales down with the taper
+
+// A solid color fill revealed through a stripe-mask, additionally masked by the
+// word so the two layers can be overlaid into a phase-inverted knockout.
+//   'field'  → positive stripes everywhere EXCEPT the word (word cut out).
+//   'figure' → negative stripes (color in the gaps) only INSIDE the word.
+function stripeBand(kind: 'field' | 'figure'): string {
+  const pitch = WM_H / WM_N;
+  // `extra` lets the figure's black bars carry a white stroke, which shrinks them
+  // and so thickens the colored stripes inside the word.
+  const bars = (fill: string, strokeBase = 0) => {
+    let s = '';
+    for (let i = 0; i < WM_N; i++) {
+      const cy = (i + 0.5) * pitch;
+      const x = i / (WM_N - 1);
+      // linear taper, but with the tail smoothstep-eased to zero before the band
+      // edge so the stripes fade out instead of stopping abruptly
+      const t = Math.min(Math.max((x - WM_FADE) / (1 - WM_FADE), 0), 1);
+      const factor = (1 - x) * (1 - t * t * (3 - 2 * t));
+      const w = pitch * WM_DUTY * factor;
+      if (w < 0.1) continue;
+      // the stroke (border) tapers with the bars instead of staying constant
+      const stroke = strokeBase ? ` stroke="#fff" stroke-width="${(strokeBase * factor).toFixed(3)}"` : '';
+      s += `<rect x="0" y="${(cy - w / 2).toFixed(2)}" width="${WM_W}" height="${w.toFixed(2)}" fill="${fill}"${stroke}/>`;
+    }
+    return s;
+  };
+  const text = (fill: string) =>
+    `<text class="wm-text" x="${WM_W / 2}" y="210" text-anchor="middle" fill="${fill}">nutelch</text>`;
+
+  // field: visible = bars (white) MINUS word (black).
+  // figure: visible = inside word (white) MINUS bars (black) → negative stripes;
+  //   the white stroke trims the black bars so those stripes read a bit thicker.
+  const maskBody =
+    kind === 'field'
+      ? bars('#fff') + text('#000')
+      : text('#fff') + bars('#000', WM_STROKE);
+  const id = `wm-${kind}`;
+  return `<svg viewBox="0 0 ${WM_W} ${WM_H}" class="wordmark-svg" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
+      <defs><mask id="${id}">${maskBody}</mask></defs>
+      <rect width="${WM_W}" height="${WM_H}" fill="currentColor" mask="url(#${id})"/>
+    </svg>`;
+}
+
+function buildWordmark(host: HTMLElement | null): void {
+  if (!host) return;
+  // figure underneath, field on top — the field's word-hole reveals the figure.
+  host.innerHTML = stripeBand('figure') + stripeBand('field');
+}
+buildWordmark(document.getElementById('wordmark'));
+
 const controlsHost = document.getElementById('controls')!;
 const sliceHost = document.getElementById('slice')!;
 const readoutHost = document.getElementById('readout')!;
