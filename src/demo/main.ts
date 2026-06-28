@@ -1,4 +1,4 @@
-import { cusp, relch, type Mode } from '../index';
+import { cusp, relch, toe, toeInv, type Mode } from '../index';
 import { oklchSrgb, oklchP3, lchSrgb, lchP3 } from '../luts';
 import {
   buildControls,
@@ -30,14 +30,9 @@ const PCT_REF = (fam: Family) => (fam === 'ok' ? 0.4 : 150);
 // caller's concern, applied to whatever axis you like by transforming the
 // input before relch(). Each maps [0,1] -> [0,1].
 const id = (x: number) => x;
-// Ottosson's lightness toe and its inverse. `toe-inv` is OkHSL's lightness
-// transform (okhsl.l -> oklab.L), so applying it to nutelch's L matches
-// OkHSL's lightness exactly; `toe` is the opposite bend, shown for contrast.
-const K1 = 0.206;
-const K2 = 0.03;
-const K3 = (1 + K1) / (1 + K2);
-const toe = (x: number) => 0.5 * (K3 * x - K1 + Math.sqrt((K3 * x - K1) ** 2 + 4 * K2 * K3 * x));
-const toeInv = (x: number) => (x * x + K1 * x) / (K3 * (x + K2));
+// `toe`/`toeInv` come from the lib now. `toe-inv` is OkHSL's lightness transform
+// (okhsl.l -> oklab.L), so applying it to nutelch's L matches OkHSL's lightness
+// exactly; `toe` is the opposite bend, shown for contrast.
 const EASE: Record<string, (x: number) => number> = {
   linear: id,
   smoothstep: (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x)),
@@ -69,7 +64,7 @@ const ranges: RangeSpec[] = [
   { key: 'l', label: 'lightness', min: 0, max: 1, step: 0.001, value: 0.72, format: fmtL },
   { key: 'relC', label: 'relC · saturation', min: 0, max: 1, step: 0.005, value: 1, format: (v) => v.toFixed(3) },
   { key: 'cuspRay', label: 'cusp reach', min: 0, max: 1, step: 0.005, value: 1, format: (v) => v.toFixed(3) },
-  { key: 'h', label: 'hue', min: 0, max: 360, step: 1, value: 142, format: (v) => `${Math.round(v)}°` },
+  { key: 'h', label: 'hue', min: 0, max: 360, step: 1, value: Math.floor(Math.random() * 360), format: (v) => `${Math.round(v)}°` },
 ];
 
 const selects: SelectSpec[] = [

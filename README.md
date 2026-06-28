@@ -87,6 +87,9 @@ toLab(relch({ lut: oklchSrgb, l: 0.6, relC: 1, h: 30 }));
   `l` to the cusp. `reach` 0 = that gray, 1 = the cusp (overshoot allowed). Moves `l` and
   `c` together — the complement to `relch`.
 - `toLab({ l, c, h })` → `{ l, a, b }` — rectangular conversion for `oklab()`/`lab()` output.
+- `toe(x)` / `toeInv(x)` → Ottosson's lightness toe and its inverse (the OkHSL `Lr`
+  remap), both mapping `[0,1]→[0,1]`. Opt-in utilities — feed `toeInv` to a lightness
+  input to align nutelch's lightness with OkHSL's. See [Curves / easing](#curves--easing).
 
 The returned `mode` and the lightness range come from the LUT you pass. The available
 LUTs are named `<space><Gamut>`:
@@ -148,6 +151,15 @@ relch({ lut: oklchSrgb, l: easeIn(0.7), relC: 1, h: 30 });
 ```
 
 A well-behaved ease maps `0→0` and `1→1`, so `relC: 1` still lands exactly on the shell.
+
+The one remap the lib *does* ship is the perceptual lightness **toe** (it's not a generic
+easing — it's the specific curve OkHSL uses for its `Lr`). Apply `toeInv` to lightness to
+match OkHSL's lightness exactly, while keeping nutelch's boundary-relative chroma:
+
+```js
+import { relch, toeInv, oklchSrgb } from 'nutelch';
+relch({ lut: oklchSrgb, l: toeInv(0.7), relC: 1, h: 30 }); // OkHSL-aligned lightness
+```
 
 ## Development
 

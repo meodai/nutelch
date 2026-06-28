@@ -159,7 +159,8 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
     marker = `<line class="guide" x1="${PAD.l}" y1="${f(py)}" x2="${f(px)}" y2="${f(py)}"/>
       <line class="guide" x1="${f(px)}" y1="${f(py)}" x2="${f(px)}" y2="${H - PAD.b}"/>
       <circle class="dot-halo" cx="${f(px)}" cy="${f(py)}" r="9"/>
-      <circle class="dot" cx="${f(px)}" cy="${f(py)}" r="5"/>`;
+      <circle class="dot" cx="${f(px)}" cy="${f(py)}" r="5"/>
+      <text class="dot-label" x="${f(px)}" y="${f(py - 13)}" text-anchor="middle">nutelch</text>`;
   }
 
   host.innerHTML = `

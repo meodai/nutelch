@@ -3,6 +3,8 @@ import type { Lut, Mode } from './luts/decode';
 
 export type { Lut, Mode };
 export { toLab } from './coords';
+// Ottosson's lightness toe + inverse — the OkHSL Lr remap, as opt-in utilities.
+export { toe, toeInv } from './toe';
 // Re-export the self-describing gamut LUTs. Import only the ones you pass to
 // cusp()/relch(); tree-shaking drops the rest (package is sideEffects-free and
 // each LUT is a /*#__PURE__*/ initializer).
