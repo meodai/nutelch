@@ -100,11 +100,7 @@ body {
 }
 
 .stage__viz {
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: 0;
   padding: 0.4rem;
-  box-shadow: 0 30px 60px -40px oklch(0 0 0 / 0.8);
 }
 
 .slice-host {
@@ -239,10 +235,7 @@ body {
 }
 
 .swatch-wrap {
-  border: 1px solid var(--line);
-  border-radius: 0;
   overflow: hidden;
-  background: var(--bg-2);
 }
 
 .swatch {
@@ -257,9 +250,6 @@ body {
   transition: background-color 0.2s ease;
 }
 
-.swatch__cell + .swatch__cell {
-  border-left: 1px solid oklch(1 0 0 / 0.12);
-}
 
 /* nutelch is the focus — give the center cell more room and an accent edge */
 .swatch__cell--main {
