@@ -23,6 +23,11 @@ const LUTS = {
   oklch: { srgb: oklchSrgb, 'display-p3': oklchP3 },
   lch: { srgb: lchSrgb, 'display-p3': lchP3 },
 } as const;
+// Importable names for each LUT, for the live code snippet.
+const LUT_NAME: Record<Mode, Record<Gamut, string>> = {
+  oklch: { srgb: 'oklchSrgb', 'display-p3': 'oklchP3' },
+  lch: { srgb: 'lchSrgb', 'display-p3': 'lchP3' },
+};
 // CSS percentage reference for chroma: oklch 100% = 0.4, lch 100% = 150.
 const PCT_REF = (fam: Family) => (fam === 'ok' ? 0.4 : 150);
 
@@ -47,13 +52,15 @@ const root = document.documentElement;
 const controlsHost = document.getElementById('controls')!;
 const sliceHost = document.getElementById('slice')!;
 const readoutHost = document.getElementById('readout')!;
+const codeHost = document.getElementById('code')!;
 const swOkhsl = document.getElementById('sw-okhsl')!;
 const swNut = document.getElementById('sw-nut')!;
 const swPct = document.getElementById('sw-pct')!;
-const cvOkhsl = swOkhsl.querySelector('.cv')!;
-const cvNut = swNut.querySelector('.cv')!;
-const cvPct = swPct.querySelector('.cv')!;
-const bnPct = swPct.querySelector('.bn')!;
+// labels live in a sibling under the shared .swatch__item, not inside the cell.
+const cvOkhsl = swOkhsl.closest('.swatch__item')!.querySelector('.cv')!;
+const cvNut = swNut.closest('.swatch__item')!.querySelector('.cv')!;
+const cvPct = swPct.closest('.swatch__item')!.querySelector('.cv')!;
+const bnPct = swPct.closest('.swatch__item')!.querySelector('.bn')!;
 
 let family: Family = 'ok';
 let lMax = 1;
@@ -62,7 +69,7 @@ const fmtL = (v: number) => (lMax === 1 ? v.toFixed(3) : Math.round(v).toString(
 
 const ranges: RangeSpec[] = [
   { key: 'l', label: 'lightness', min: 0, max: 1, step: 0.001, value: 0.72, format: fmtL },
-  { key: 'relC', label: 'relC · saturation', min: 0, max: 1, step: 0.005, value: 1, format: (v) => v.toFixed(3) },
+  { key: 'relC', label: 'relC · saturation', min: 0, max: 1, step: 0.005, value: 0.67, format: (v) => v.toFixed(3) },
   { key: 'cuspRay', label: 'cusp reach', min: 0, max: 1, step: 0.005, value: 1, format: (v) => v.toFixed(3) },
   { key: 'h', label: 'hue', min: 0, max: 360, step: 1, value: Math.floor(Math.random() * 360), format: (v) => `${Math.round(v)}°` },
 ];
@@ -98,7 +105,6 @@ function renderReadout(
   const lStr = fam === 'ok' ? col.l.toFixed(3) : Math.round(col.l).toString();
   const over = relC > 1.0001;
   readoutHost.innerHTML = `
-    <div class="readout__mode">${col.mode}</div>
     <dl class="readout__grid">
       <div><dt>L</dt><dd>${lStr}</dd></div>
       <div><dt>C</dt><dd>${fmtComp(fam, col.c)}</dd></div>
@@ -110,6 +116,17 @@ function renderReadout(
       ${over ? '<span class="readout__flag">out of gamut</span>' : ''}
     </div>
     <code class="readout__css">${cssStr}</code>`;
+}
+
+// The live, copy-pasteable snippet that reproduces the current color. Shows the
+// resolved (post-curve) l/relC, so it stands alone with just relch + the LUT.
+function renderCode(lutName: string, fam: Family, l: number, relC: number, h: number, cssStr: string): void {
+  const lArg = fam === 'ok' ? l.toFixed(4) : l.toFixed(2);
+  const cArg = relC.toFixed(fam === 'ok' ? 4 : 3);
+  codeHost.textContent =
+    `import { relch, ${lutName} } from 'nutelch';\n\n` +
+    `relch({ lut: ${lutName}, l: ${lArg}, relC: ${cArg}, h: ${Math.round(h)} });\n` +
+    `// → ${cssStr}`;
 }
 
 function render(v: ControlValues): void {
@@ -153,7 +170,6 @@ function render(v: ControlValues): void {
 
   // Theme the page with nutelch's live color.
   root.style.setProperty('--live', cssNut);
-  root.style.setProperty('--live-hue', String(h));
 
   swNut.style.background = cssNut;
   swPct.style.background = cssPct;
@@ -165,6 +181,7 @@ function render(v: ControlValues): void {
   bnPct.textContent = fam === 'ok' ? 'oklch %' : 'lch %';
 
   renderReadout(col, cssNut, fam, relC, peakC);
+  renderCode(LUT_NAME[mode][gamut], fam, lEased, relCe, h, cssNut);
 
   renderSlice(sliceHost, {
     hue: h,

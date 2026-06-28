@@ -179,8 +179,5 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
       ${pctMarker}
       ${marker}
       ${cTicks}
-      <text class="axis" x="16" y="${f(PAD.t + PLOT_H / 2)}"
-            transform="rotate(-90 16 ${f(PAD.t + PLOT_H / 2)})" text-anchor="middle">lightness</text>
-      <text class="axis" x="${f(PAD.l + PLOT_W / 2)}" y="${H - 5}" text-anchor="middle">chroma →</text>
     </svg>`;
 }

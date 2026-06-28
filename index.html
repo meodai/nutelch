@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,200..800&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/src/demo/style.css" />
@@ -23,14 +23,33 @@
       <section class="stage">
         <div class="stage__viz">
           <div id="slice" class="slice-host"></div>
+          <pre class="code" aria-label="code to reproduce the current color"><code id="code"></code></pre>
+          <p class="explain">
+            <b>nutelch</b> measures chroma relative to the gamut <em>shell</em> — the cusp — in
+            OKLCH and LCH. You ask for a fraction of the way to the boundary (<code>relC</code>)
+            instead of an absolute chroma, so &ldquo;saturation&rdquo; means the same thing at
+            every lightness and hue and never accidentally lands out of gamut, while the result
+            stays a native <code>oklch()</code> / <code>lch()</code> color. It's dependency-free
+            and LUT-backed: the boundaries are precomputed, so lookups are fast.
+            <a href="https://github.com/meodai/nutelch" target="_blank" rel="noopener">nutelch on GitHub →</a>
+          </p>
         </div>
 
         <aside class="panel">
           <div class="swatch-wrap">
             <div class="swatch">
-              <div class="swatch__cell" id="sw-okhsl"><small><b>okhsl</b><span class="cv"></span></small></div>
-              <div class="swatch__cell swatch__cell--main" id="sw-nut"><small><b>nutelch · relC</b><span class="cv"></span></small></div>
-              <div class="swatch__cell" id="sw-pct"><small><b class="bn"></b><span class="cv"></span></small></div>
+              <div class="swatch__item">
+                <div class="swatch__cell" id="sw-okhsl"></div>
+                <small class="swatch__label"><b>okhsl</b></small>
+              </div>
+              <div class="swatch__item swatch__item--main">
+                <div class="swatch__cell swatch__cell--main" id="sw-nut"></div>
+                <small class="swatch__label"><b>nutelch · relC</b></small>
+              </div>
+              <div class="swatch__item">
+                <div class="swatch__cell" id="sw-pct"></div>
+                <small class="swatch__label"><b class="bn"></b></small>
+              </div>
             </div>
             <div id="readout" class="readout"></div>
           </div>
