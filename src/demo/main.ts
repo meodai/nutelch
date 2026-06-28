@@ -87,12 +87,6 @@ const css = (fam: Family, t: number, c: number, h: number) =>
 
 const fmtComp = (fam: Family, v: number) => (fam === 'ok' ? v.toFixed(4) : v.toFixed(2));
 
-// Compact L·C·H readout in the active family's scale.
-const compact = (fam: Family, t: number, c: number, h: number) =>
-  fam === 'ok'
-    ? `${t.toFixed(3)} ${c.toFixed(3)} ${Math.round(h)}°`
-    : `${Math.round(t * 100)} ${Math.round(c)} ${Math.round(h)}°`;
-
 function renderReadout(
   col: { mode: Mode; l: number; c: number; h: number },
   cssStr: string,

@@ -355,13 +355,6 @@ body {
   color: var(--ink);
 }
 
-.swatch__label .cv {
-  font-family: var(--mono);
-  font-size: var(--fs-label);
-  color: var(--ink-dim);
-  font-variant-numeric: tabular-nums;
-}
-
 .readout {
   padding: 0;
 }
