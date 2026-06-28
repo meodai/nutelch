@@ -317,6 +317,7 @@ body {
 .swatch {
   display: flex;
   gap: 0.4rem;
+  margin-bottom: 3rem;
 }
 
 .swatch__item {

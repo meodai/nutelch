@@ -67,7 +67,7 @@ const fmtL = (v: number) => (lMax === 1 ? v.toFixed(3) : Math.round(v).toString(
 
 const ranges: RangeSpec[] = [
   { key: 'l', label: 'lightness', min: 0, max: 1, step: 0.001, value: 0.72, format: fmtL },
-  { key: 'relC', label: 'relC · saturation', min: 0, max: 1, step: 0.005, value: 0.67, format: (v) => v.toFixed(3) },
+  { key: 'relC', label: 'relC · saturation', min: 0, max: 1.5, step: 0.005, value: 0.67, format: (v) => v.toFixed(3) },
   { key: 'cuspRay', label: 'cusp reach', min: 0, max: 1, step: 0.005, value: 1, format: (v) => v.toFixed(3) },
   { key: 'h', label: 'hue', min: 0, max: 360, step: 1, value: Math.floor(Math.random() * 360), format: (v) => `${Math.round(v)}°` },
 ];
@@ -178,8 +178,9 @@ function render(v: ControlValues): void {
     cssColor: (tt, c) => css(fam, tt, c, h),
     lutEnvelope: (tt) => cusp({ lut, l: tt * lMaxOf(fam), h }).c,
     // Pin the chroma axis to the hue's global cusp (and the % reference) so it
-    // stays put while you drag L / relC / cusp-reach — only hue rescales it.
-    cmax: Math.max(peakCusp.c, PCT_REF(fam), lMaxOf(fam) === 1 ? 0.05 : 5) * 1.15,
+    // stays put for every in-gamut move; it only grows past that when relC
+    // overshoots the shell (col.c / cPct exceed the cusp).
+    cmax: Math.max(peakCusp.c, PCT_REF(fam), col.c, cPct, lMaxOf(fam) === 1 ? 0.05 : 5) * 1.15,
     point: { l: t, c: col.c },
     pctPoint: { l: t, c: cPct },
     pctLabel: fam === 'ok' ? 'oklch%' : 'lch%',
