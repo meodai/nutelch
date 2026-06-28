@@ -1,4 +1,4 @@
-import { cusp, relch, toCss, toe, toeInv, type Mode } from '../index';
+import { cusp, relch, toCss, toe, toeInv, smoothstep, type Mode } from '../index';
 import { oklchSrgb, oklchP3, lchSrgb, lchP3 } from '../luts';
 import {
   buildControls,
@@ -40,7 +40,7 @@ const id = (x: number) => x;
 // exactly; `toe` is the opposite bend, shown for contrast.
 const EASE: Record<string, (x: number) => number> = {
   linear: id,
-  smoothstep: (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x)),
+  smoothstep,
   'ease-in': (x) => x * x,
   'ease-out': (x) => 1 - (1 - x) * (1 - x),
   'toe-inv': toeInv,

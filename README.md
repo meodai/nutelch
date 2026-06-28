@@ -96,6 +96,8 @@ toLab(relch({ lut: oklchSrgb, l: 0.6, relC: 1, h: 30 }));
 - `toe(x)` / `toeInv(x)` → Ottosson's lightness toe and its inverse (the OkHSL `Lr`
   remap), both mapping `[0,1]→[0,1]`. Opt-in utilities — feed `toeInv` to a lightness
   input to align nutelch's lightness with OkHSL's. See [Curves / easing](#curves--easing).
+- `smoothstep(x)` → the classic Hermite ease-in-out, clamped to `[0,1]`. The one
+  general-purpose curve the lib ships; apply your own for anything else.
 
 The returned `mode` and the lightness range come from the LUT you pass. The available
 LUTs are named `<space><Gamut>`:
