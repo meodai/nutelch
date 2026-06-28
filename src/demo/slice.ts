@@ -27,14 +27,6 @@ const PLOT_H = H - PAD.t - PAD.b;
 const f = (n: number) => n.toFixed(2);
 const fmtPts = (p: Array<[number, number]>) => p.map(([x, y]) => `${f(x)},${f(y)}`).join(' ');
 
-function niceStep(max: number): number {
-  const raw = max / 4;
-  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
-  const n = raw / mag;
-  const s = n < 1.5 ? 1 : n < 3 ? 2 : n < 7 ? 5 : 10;
-  return s * mag;
-}
-
 export function renderSlice(host: HTMLElement, input: SliceInput): void {
   const { hue, lMax, cssColor, lutEnvelope, cmax, point, pctPoint, pctLabel, okhslPoint, okhslLabel } =
     input;
@@ -99,23 +91,13 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
       <text x="${f(X(cuspC) + 9)}" y="${f(Y(cuspT) + 4)}" text-anchor="start">cusp ${cuspLabel}</text>
     </g>`;
 
-  // Lightness gridlines, labelled in native units.
+  // Lightness gridlines (unlabelled).
   const lTicks = [0, 0.25, 0.5, 0.75, 1]
     .map((t) => {
       const y = Y(t);
-      const lab = lMax === 1 ? t.toFixed(2) : Math.round(t * lMax).toString();
-      return `<line class="grid" x1="${PAD.l}" y1="${f(y)}" x2="${W - PAD.r}" y2="${f(y)}"/>
-        <text class="tick" x="${PAD.l - 10}" y="${f(y + 3)}" text-anchor="end">${lab}</text>`;
+      return `<line class="grid" x1="${PAD.l}" y1="${f(y)}" x2="${W - PAD.r}" y2="${f(y)}"/>`;
     })
     .join('');
-
-  // Chroma ticks along the bottom.
-  let cTicks = '';
-  const step = niceStep(cmax);
-  for (let c = step; c < cmax; c += step) {
-    const lab = lMax === 1 ? c.toFixed(2) : Math.round(c).toString();
-    cTicks += `<text class="tick" x="${f(X(c))}" y="${H - PAD.b + 17}" text-anchor="middle">${lab}</text>`;
-  }
 
   // The raw oklch%/lch% point — an outlined square. When its chroma exceeds the
   // shell at its lightness it's out of gamut, so flag it (and it sits right of
@@ -169,7 +151,6 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
       <defs>${defs}
         <clipPath id="plot-clip"><rect x="${PAD.l}" y="${PAD.t}" width="${PLOT_W}" height="${PLOT_H}"/></clipPath>
       </defs>
-      <text class="slice__title" x="${PAD.l}" y="20">gamut shell · hue ${Math.round(hue)}°</text>
       ${lTicks}
       ${fill}
       ${lutLine}
@@ -178,6 +159,5 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
       ${okhslMarker}
       ${pctMarker}
       ${marker}
-      ${cTicks}
     </svg>`;
 }
