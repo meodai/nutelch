@@ -86,7 +86,7 @@ function stripeBand(kind: 'field' | 'figure'): string {
     return s;
   };
   const text = (fill: string) =>
-    `<text class="wm-text" x="${WM_W / 2}" y="210" text-anchor="middle" fill="${fill}">nutelch</text>`;
+    `<text class="wm-text" x="${WM_W / 2}" y="280" text-anchor="middle" fill="${fill}">nutelch</text>`;
 
   // field: visible = bars (white) MINUS word (black).
   // figure: visible = inside word (white) MINUS bars (black) → negative stripes;

@@ -147,7 +147,7 @@ body {
   z-index: 1;
   font-family: var(--mono);
   font-size: 1.1vw;
-  transform: translateX(30vw) translateX(-50%);
+  transform: translateX(35vw) translateX(-50%);
   font-weight: 900;
   color: var(--bg);
 }
@@ -177,9 +177,9 @@ body {
 }
 
 .tagline {
-  margin: -1em 0 5rem;
+  margin: 1em 0 5rem;
   font-size: .15em;
-  font-weight: 500;
+  font-weight: 200;
   letter-spacing: 0.04em;
 }
 
