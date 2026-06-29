@@ -90,7 +90,6 @@ body {
 .masthead {
   position: relative;
   text-align: center;
-  font-size: min(10vw, 15rem);
   margin: 0;
 }
 
@@ -137,10 +136,9 @@ body {
 }
 
 .tagline {
-  margin: 1em 0 5rem;
-  font-size: .15em;
+  font-size: 2em;
+  margin: .1em 0 5rem;
   font-weight: 200;
-  letter-spacing: 0.04em;
 }
 
 .stage {
