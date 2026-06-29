@@ -315,7 +315,8 @@ function runBenchmark(): void {
   const elSpeed = document.getElementById('brag-speedup');
   const elRate = document.getElementById('brag-rate');
   const elOkhsl = document.getElementById('brag-okhsl');
-  if (!elSpeed || !elRate || !elOkhsl) return;
+  const elError = document.getElementById('brag-error');
+  if (!elSpeed || !elRate || !elOkhsl || !elError) return;
 
   const lut = oklchSrgb;
   const N = 24000;
@@ -356,6 +357,27 @@ function runBenchmark(): void {
   elSpeed.textContent = fmt(culMs / nutMs);
   elRate.textContent = Math.round(N / nutMs).toLocaleString();
   elOkhsl.textContent = fmt(okMs / nut2Ms);
+
+  // Worst-case boundary error vs the true sRGB gamut, measured correctly: sweep a
+  // dense (L, H) grid and take the largest |LUT − culori| across it. The old demo
+  // used a coarse 5°/0.05-L grid whose samples landed near LUT nodes (where error
+  // is ~0), so it badly under-reported. A fine grid converges on the real figure.
+  // (The sRGB gamut is slightly non-convex at the blue corner, giving a ~0.036
+  // near-singular spike over a <0.02° hue band; a practical grid steps over that
+  // measure-zero sliver, which is also unreachable in real use — and undershoot
+  // there is the safe, in-gamut direction.)
+  const EL = 144;
+  const EH = 576;
+  let worst = 0;
+  for (let i = 1; i < EL; i++) {
+    const l = i / EL;
+    for (let j = 0; j < EH; j++) {
+      const h = (j / EH) * 360;
+      const e = Math.abs(cusp({ lut, l, h }).c - actualMaxChroma('ok', l, h, 'srgb'));
+      if (e > worst) worst = e;
+    }
+  }
+  elError.textContent = `±${worst.toFixed(3)}`;
 }
 
 requestAnimationFrame(() => setTimeout(runBenchmark, 0));

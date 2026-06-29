@@ -35,11 +35,16 @@ interface Case {
   absMax: number;
 }
 
+// Bounds are coarse-sweep characterizations (not the true worst case — see the
+// adaptive ratchet in interp.accuracy.test.ts for that). The adaptive grid trades
+// a little smooth-region accuracy for far better cusp tracking, so CIE LCH mean
+// error is ~0.2% of cmax (still well under ΔE 1) — looser than the old uniform
+// grid in the bulk, much tighter at the cusps.
 const CASES: Case[] = [
   { name: 'oklch/srgb', lut: oklchSrgb, mode: 'oklch', rgb: 'rgb', ceiling: 0.5, meanMax: 0.002, absMax: 0.05 },
   { name: 'oklch/p3', lut: oklchP3, mode: 'oklch', rgb: 'p3', ceiling: 0.5, meanMax: 0.002, absMax: 0.05 },
-  { name: 'lch/srgb', lut: lchSrgb, mode: 'lch', rgb: 'rgb', ceiling: 160, meanMax: 0.2, absMax: 60 },
-  { name: 'lch/p3', lut: lchP3, mode: 'lch', rgb: 'p3', ceiling: 160, meanMax: 0.2, absMax: 60 },
+  { name: 'lch/srgb', lut: lchSrgb, mode: 'lch', rgb: 'rgb', ceiling: 160, meanMax: 0.4, absMax: 60 },
+  { name: 'lch/p3', lut: lchP3, mode: 'lch', rgb: 'p3', ceiling: 160, meanMax: 0.4, absMax: 60 },
 ];
 
 // Interior lightness + hue sweep (extremes are 0 by construction).

@@ -42,6 +42,7 @@
   "scripts": {
     "dev": "vite",
     "build:luts": "tsx scripts/build-luts.ts",
+    "eval:luts": "tsx scripts/eval-luts.ts",
     "build:lib": "vite build --config vite.lib.config.ts",
     "build:demo": "vite build",
     "preview": "vite preview",

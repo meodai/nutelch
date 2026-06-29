@@ -61,12 +61,13 @@ export function toCss({ mode, l, c, h }: Color): string {
 // The cusp: the most chromatic color of a hue — the peak of the gamut shell over
 // ALL lightness (unlike cusp(), which is the max chroma at one given lightness).
 // The boundary is piecewise-linear in L between LUT rows, so its maximum lands on
-// a row node — scanning the rows finds it exactly.
+// a row node — scanning the rows finds it exactly. With a non-uniform LUT the rows
+// sit at `lbp`; otherwise they are evenly spaced.
 export function peak({ lut, h }: PeakInput): Color {
   let bestL = 0;
   let bestC = -1;
   for (let i = 0; i < lut.lSteps; i++) {
-    const l = (i / (lut.lSteps - 1)) * lut.lMax;
+    const l = lut.lbp ? lut.lbp[i]! : (i / (lut.lSteps - 1)) * lut.lMax;
     const c = maxChroma(lut, l, h);
     if (c > bestC) {
       bestC = c;

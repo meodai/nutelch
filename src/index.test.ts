@@ -83,7 +83,11 @@ describe('peak', () => {
   it('matches a fine scan of the boundary', () => {
     let best = 0;
     for (let i = 0; i <= 2000; i++) best = Math.max(best, cusp({ lut: oklchSrgb, l: i / 2000, h: 30 }).c);
-    expect(peak({ lut: oklchSrgb, h: 30 }).c).toBeCloseTo(best, 6);
+    // peak() evaluates exactly at the breakpoint nodes where the piecewise-linear
+    // boundary peaks, so it is the true max; a uniform fine scan only approaches it.
+    const p = peak({ lut: oklchSrgb, h: 30 }).c;
+    expect(p).toBeGreaterThanOrEqual(best - 1e-9);
+    expect(p - best).toBeLessThan(2e-3);
   });
 
   it('uses the LUT scale (lch L on 0..100) and tracks the wider P3 gamut', () => {

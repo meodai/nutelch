@@ -6,6 +6,10 @@ nutelch lets you say "halfway to the boundary" (`relC: 0.5`) at any lightness an
 
 Dependency-free at runtime: gamut boundaries are precomputed into compact LUTs
 (culori is a build-time dependency only) and looked up with bilinear interpolation.
+The OKLCH LUTs are **adaptive** — their grid lines bunch around the cusps, where the
+boundary bends, and thin out where it's near-linear — so they track the shell ~3×
+more accurately than a uniform grid while staying *smaller*. See
+[Adaptive LUTs](#adaptive-luts-why-the-grid-is-non-uniform).
 
 ## Where it sits: between OKLCH and OkHSL
 
@@ -182,11 +186,56 @@ relch({ lut: oklchSrgb, l: toeInv(0.7), relC: 1, h: 30 }); // OkHSL-aligned ligh
 toe(0.5); // → 0.42…  the inverse direction (L → Lr), e.g. to label a color's lightness
 ```
 
+## Adaptive LUTs: why the grid is non-uniform
+
+The gamut shell isn't equally complex everywhere. A constant-hue slice rises to a
+sharp **cusp** then falls to white; as a function of hue the max chroma spikes near
+the primaries. A *uniform* grid spends the same number of samples on the flat
+regions as on these corners, so bilinear interpolation **overshoots across a sharp
+cusp** — claiming more chroma than the gamut actually holds. That's a real bug: at
+OKLCH/sRGB blue (`L≈0.45, H≈264`) a uniform 65×256 grid reported `C≈0.288` when the
+true boundary is `≈0.261`.
+
+An **adaptive** LUT fixes this by placing its grid lines where the boundary bends —
+dense around the cusps, sparse where it's near-linear — found by sampling the
+boundary's curvature at build time. It's the *same* kind of table (precomputed
+chroma + bilinear); only the sample positions change, plus a small breakpoint array
+and a binary search to find the cell.
+
+We measured the candidates against culori ground truth (`npm run eval:luts`;
+experiments in `scripts/adaptive-explore.ts` / `final-compare.ts`). Figures are for
+**oklch/sRGB**, *practical* worst-case error as a fraction of `cmax`:
+
+| representation                 | worst overshoot | worst undershoot |   size | lookup speed |
+| ------------------------------ | --------------: | ---------------: | -----: | -----------: |
+| uniform 65×256 (old)           |           ~8.5% |          ~−10.7% |  33 KB |        1.00× |
+| cusp-triangle (Ottosson)       |           ~9.7% |             safe |   2 KB |  0.16× (6× faster) |
+| uniform 129×1024               |           ~1.8% |           ~−5.9% | 264 KB |        1.00× |
+| **adaptive 49×192 (chosen)**   |       **~2.9%** |       **~−2.4%** | **19 KB** | **~1.1×** |
+
+**Why adaptive non-uniform won (for OKLCH):** it cuts the *dangerous* overshoot ~3×
+**and** shrinks the LUT (19 KB vs 33 KB), where matching that accuracy with a uniform
+grid would need ~8× the bytes. The only cost is ~10% slower lookups (a binary search
+over breakpoints instead of a direct index). The cusp-triangle is far smaller/faster
+but its straight edges can't follow the curved gamut (rms ~1.8%), and a higher-res
+uniform grid never fixes the overshoot at a useful size.
+
+**Why CIE LCH stays uniform:** LCH's gamut is broadly curved *everywhere*, so a sparse
+adaptive grid starves the smooth bulk (rms blows up ~5×). A uniform grid is the better
+fit there; its only large errors are at the near-singular yellow-white cusp.
+
+**One honest caveat:** the sRGB gamut is slightly *non-convex* at the blue corner, so
+the true "first-exit" max chroma is near-discontinuous over a `<0.02°` hue band — a
+spike no finite linear LUT (or OkHSL) can resolve. nutelch leaves that as a tiny
+*undershoot*, which is the safe, always-in-gamut direction. Practical worst-case
+boundary error for the OKLCH LUTs is `±0.009` (the demo measures this live).
+
 ## Development
 
 ```bash
 npm install
-npm run build:luts   # regenerate LUTs from culori
+npm run build:luts   # regenerate LUTs from culori (adaptive OKLCH + uniform LCH)
+npm run eval:luts    # accuracy report: LUT vs culori boundary, per LUT
 npm test
 npm run dev          # interactive cusp explorer (compares LUT vs actual vs OkHSL)
 npm run build:lib    # publishable dist/
