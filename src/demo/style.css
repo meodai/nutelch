@@ -195,7 +195,7 @@ body {
 
 .brag b {
   font-family: var(--sans);
-  font-size: 2rem;
+  font-size: 3em;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -203,9 +203,9 @@ body {
 }
 
 .brag span {
-  font-size: var(--fs-small);
   color: var(--onBg);
   line-height: 1.35;
+  max-width: 24ch;
 }
 
 .explain a {
