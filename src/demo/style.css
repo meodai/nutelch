@@ -119,6 +119,11 @@ body {
 
   .wordmark-svg {
     transform: scaleY(-1);
+
+    .wm-text {
+      transform: scaleY(-1) translateY(.25rem);
+      transform-origin: center;
+    }
   }
 }
 
