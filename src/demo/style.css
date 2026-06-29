@@ -391,6 +391,11 @@ body {
   margin: 0 0 0.8rem;
 }
 
+.readout__grid div {
+  display: flex;
+  gap: 0.35rem;
+}
+
 
 .readout__grid dt {
   color: var(--onBg);
