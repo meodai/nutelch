@@ -12,73 +12,39 @@
 :root {
   --live: oklch(0.72 0.16 142);
 
-  --bg: oklch(0.16 0.012 70);
-  --bg-2: oklch(0.205 0.014 70);
-  --bg-3: oklch(0.25 0.015 70);
-  --line: oklch(0.34 0.014 70);
-  --ink: oklch(0.93 0.012 80);
-  --ink-dim: oklch(0.66 0.012 80);
-
-  /* scheme-dependent slice/marker tones (defaults = dark) */
-  --grid: oklch(1 0 0 / 0.06);
-  --guide: oklch(1 0 0 / 0.45);
-  --halo: oklch(1 0 0 / 0.18);
-  --dot-fill: oklch(0.98 0 0);
-  --dot-ring: oklch(0 0 0 / 0.55);
-  /* text-outline = the page background (opaque), so glyphs read as a clean cutout
-     over the colored shell instead of picking up its hue through a translucent halo */
-  --label-halo: var(--bg);
+  --bg: color-mix(in oklch, oklch(from var(--live) l c calc(h + 180)) 10%, oklch(0.1 0 0));
+  --line: #fff;
+  --onBg: #fff;
 
   --mono: 'Paper Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
   --sans: 'Newsreader', Georgia, 'Times New Roman', serif;
 
-  /* type scale — four steps, used everywhere instead of one-off sizes */
-  --fs-label: .8rem; /* captions: control / axis names, swatch names, dt */
-  --fs-small: 0.8rem; /* dense mono + secondary text: code, css, map, select */
-  --fs-value: 0.9rem; /* numeric values: readout dd, slider value */
-  --fs-body: 0.95rem; /* prose */
+  --fs-small: 1rem; 
+  --fs-body: 1.2rem; 
 
   color-scheme: dark;
 }
 
 @media (prefers-color-scheme: light) {
   :root {
-    --bg: oklch(0.97 0.008 85);
-    --bg-2: oklch(0.94 0.01 85);
-    --bg-3: oklch(0.89 0.012 85);
-    --line: oklch(0.84 0.012 85);
-    --ink: oklch(0.27 0.014 80);
-    --ink-dim: oklch(0.5 0.014 80);
-
-    --grid: oklch(0 0 0 / 0.08);
-    --guide: oklch(0 0 0 / 0.5);
-    --halo: oklch(0 0 0 / 0.12);
-    --dot-fill: oklch(0.2 0 0);
-    --dot-ring: oklch(1 0 0 / 0.65);
-    /* --label-halo inherits var(--bg) from :root, so it flips with the scheme */
+    --bg: color-mix(in oklch, oklch(from var(--live) l c calc(h + 180)) 7%, oklch(1 0 0));
+    --line: #202126;
+    --onBg: oklch(0 0 0);
 
     color-scheme: light;
   }
 }
 
-* {
-  box-sizing: border-box;
-}
-
-/* selection tinted with the live color; --live-ink is the contrasting text
-   color, computed in JS from the color's lightness */
 ::selection {
   background: var(--live);
   color: var(--live-ink, var(--bg));
 }
 
-/* scrollbar tinted with the live color (Firefox + standard) */
 html {
   scrollbar-color: var(--live) transparent;
   scrollbar-width: thin;
 }
 
-/* WebKit scrollbar */
 ::-webkit-scrollbar {
   width: 12px;
   height: 12px;
@@ -90,49 +56,37 @@ html {
 
 ::-webkit-scrollbar-thumb {
   background: var(--live);
-  border: 3px solid var(--bg); /* inset padding so the thumb reads as a slim bar */
+  border: 3px solid var(--bg);
   border-radius: 0;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--ink);
+  background: var(--onBg);
 }
 
 html,
 body {
   margin: 0;
   min-height: 100%;
-  overflow-x: hidden; /* the 100vw masthead breakout can exceed the content width */
+  overflow-x: clip;
 }
 
 body {
   background: var(--bg);
-  color: var(--ink);
+  color: var(--onBg);
   font-family: var(--sans);
-  font-size: 15px;
-  font-weight: 400; /* regular body weight; extra light is reserved for titles */
-  line-height: 1.5;
+  font-size: var(--fs-body);
+  font-weight: 200; 
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
 
-/* fine grain overlay for texture */
-.grain {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  pointer-events: none;
-  opacity: 0.04;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
 #app {
-  max-width: 1080px;
+  max-width: 65rem;
+  padding: 2rem;
   margin: 0 auto;
-  padding: clamp(1.5rem, 4vw, 4rem) clamp(1.2rem, 4vw, 3rem) 3rem;
 }
 
-/* ── masthead ─────────────────────────────────────────────── */
 .masthead {
   position: relative;
   text-align: center;
@@ -142,7 +96,7 @@ body {
 
 .version {
   position: absolute;
-  top: 2.5vw;
+  top: 5vw;
   left: 50%;
   z-index: 1;
   font-family: var(--mono);
@@ -150,20 +104,26 @@ body {
   transform: translateX(35vw) translateX(-50%);
   font-weight: 900;
   color: var(--bg);
+  display: none;
 }
 
 .wordmark {
-  /* break out of the centered content column so the stripes bleed edge to edge,
-     and pull up by #app's top padding so the band sits flush at the page top */
-  display: grid; /* overlay the two bands in one cell */
+  --y-inset: calc(clamp(1.5rem, 4vw, 4rem) * -1);
   width: 100vw;
-  margin: calc(clamp(1.5rem, 4vw, 4rem) * -1) 0 0 calc(50% - 50vw);
+  margin: var(--y-inset) 0 0 calc(50% - 50vw);
   line-height: 0;
   color: var(--live); /* stripe fill (currentColor in the SVG) */
 }
 
+.wordmark--footer {
+  margin: 0 0 var(--y-inset) calc(50% - 50vw);
+
+  .wordmark-svg {
+    transform: scaleY(-1);
+  }
+}
+
 .wordmark-svg {
-  grid-area: 1 / 1; /* both bands stack exactly */
   display: block;
   width: 100%;
   height: auto;
@@ -185,8 +145,8 @@ body {
 
 .stage {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(260px, 1fr);
-  gap: clamp(1.2rem, 3vw, 2.4rem);
+  grid-template-columns: minmax(3rem, 1fr) minmax(0, 1.8fr);
+  gap: 3vw;
   align-items: start;
 }
 
@@ -203,15 +163,14 @@ body {
 .explain {
   margin: 0.8rem 0 0;
   max-width: 55ch;
-  font-size: var(--fs-body);
-  line-height: 1.6;
-  color: var(--ink-dim);
+  color: var(--onBg);
 }
 
 .explain code {
   font-family: var(--mono);
-  font-size: 0.82em;
-  color: var(--ink);
+  font-size: 0.85em;
+  color: var(--onBg);
+  font-weight: 500;
 }
 
 .brag {
@@ -231,8 +190,8 @@ body {
 }
 
 .brag b {
-  font-family: var(--mono);
-  font-size: 1.6rem;
+  font-family: var(--sans);
+  font-size: 2rem;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -240,13 +199,13 @@ body {
 }
 
 .brag span {
-  font-size: var(--fs-label);
-  color: var(--ink-dim);
+  font-size: var(--fs-small);
+  color: var(--onBg);
   line-height: 1.35;
 }
 
 .explain a {
-  color: var(--ink);
+  color: var(--onBg);
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
 }
@@ -254,14 +213,11 @@ body {
 .code {
   display: block;
   margin: 0.6rem 0 0;
-  padding: 0.7rem 0.85rem;
-  background: var(--bg-2);
-  border: 1px solid var(--line);
   border-radius: 0;
   font-family: var(--mono);
-  font-size: var(--fs-small);
+  font-size: .6em;
   line-height: 1.55;
-  color: var(--ink);
+  color: var(--onBg);
   white-space: pre;
   overflow-x: auto;
   tab-size: 2;
@@ -282,7 +238,7 @@ body {
 }
 
 .grid {
-  stroke: var(--grid);
+  stroke: var(--line);
   stroke-width: 1;
 }
 
@@ -294,7 +250,7 @@ body {
 }
 
 .env--lut {
-  stroke: var(--ink);
+  stroke: var(--onBg);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
   opacity: 0.9;
@@ -302,87 +258,78 @@ body {
 
 .cusp circle {
   fill: none;
-  stroke: var(--ink);
+  stroke: var(--onBg);
   stroke-width: 1.5;
 }
 
 .cusp text {
   font-family: var(--mono);
   font-size: 10px;
-  fill: var(--ink);
+  fill: var(--onBg);
   paint-order: stroke;
-  stroke: var(--label-halo);
+  stroke: var(--bg);
   stroke-width: 3px;
   stroke-linejoin: round;
 }
 
 .guide {
-  stroke: var(--guide);
+  stroke: var(--line);
   stroke-width: 1;
   stroke-dasharray: 2 2;
 }
 
 /* The cusp ray — the line the "cusp reach" slider drags the dot along. */
 .ray {
-  stroke: var(--ink);
+  stroke: var(--onBg);
   stroke-width: 1.25;
   stroke-dasharray: 5 3;
   opacity: 0.5;
 }
 
 .dot-halo {
-  fill: var(--halo);
+  fill: var(--line);
 }
 
 .dot {
-  fill: var(--dot-fill);
-  stroke: var(--dot-ring);
+  fill: var(--onBg);
+  stroke: var(--bg);
   stroke-width: 1.5;
 }
 
-/* raw oklch%/lch% point: outlined dot; turns orange when out of gamut */
 .dot-pct {
   fill: none;
-  stroke: var(--ink);
+  stroke: var(--onBg);
   stroke-width: 1.5;
 }
 
-/* every sample-point label: legible over any part of the colored shell via a
-   dark halo painted behind the glyphs */
 .dot-label,
 .dot-pct-label,
 .dot-okhsl-label {
   font-family: var(--mono);
   font-size: 9px;
-  fill: var(--ink);
+  fill: var(--onBg);
   paint-order: stroke;
-  stroke: var(--label-halo);
+  stroke: var(--bg);
   stroke-width: 3px;
   stroke-linejoin: round;
 }
 
-/* OkHSL point — same neutral treatment as the % point; the label tells them apart */
 .dot-okhsl {
   fill: none;
-  stroke: var(--ink);
+  stroke: var(--onBg);
   stroke-width: 1.5;
 }
 
-/* ── panel ────────────────────────────────────────────────── */
 .panel {
   display: flex;
   flex-direction: column;
   gap: 1.4rem;
 }
 
-.swatch-wrap {
-  overflow: hidden;
-}
-
 .swatch {
   display: flex;
   gap: 1px;
-  margin-bottom: 3rem;
+  margin-block: 1rem 2rem;
 }
 
 .swatch__item {
@@ -392,8 +339,28 @@ body {
 }
 
 .swatch__cell {
+  position: relative;
   aspect-ratio: 2.5;
   background: var(--live);
+}
+
+/* out-of-gamut badge — a "!" pinned to the cell's upper-right; title shows on hover */
+.swatch__flag {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  font-family: var(--mono);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  line-height: 1;
+  /* the live color + its paired ink — readable by construction */
+  background: var(--live);
+  color: var(--live-ink);
+  cursor: help;
 }
 
 
@@ -410,7 +377,7 @@ body {
   font-size: var(--fs-small);
   font-weight: 500;
   letter-spacing: 0.08em;
-  color: var(--ink);
+  color: var(--onBg);
 }
 
 .readout {
@@ -426,22 +393,22 @@ body {
 
 
 .readout__grid dt {
-  color: var(--ink-dim);
-  font-size: var(--fs-label);
+  color: var(--onBg);
+  font-size: var(--fs-small);
   letter-spacing: 0.1em;
 }
 
 .readout__grid dd {
   margin: 0.1rem 0 0;
   font-family: var(--mono);
-  font-size: var(--fs-value);
+  font-size: var(--fs-body);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 
 .readout__map {
   font-size: var(--fs-small);
-  color: var(--ink-dim);
+  color: var(--onBg);
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -451,20 +418,14 @@ body {
 }
 
 .readout__map b {
-  color: var(--ink);
+  color: var(--onBg);
   font-family: var(--mono);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 
 .readout__cusp {
-  color: var(--ink-dim);
-}
-
-.readout__flag {
-  color: oklch(0.82 0.18 35);
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  color: var(--onBg);
 }
 
 .readout__map.is-over b {
@@ -491,14 +452,14 @@ body {
 }
 
 .ctrl__name {
-  color: var(--ink-dim);
-  font-size: var(--fs-label);
+  color: var(--onBg);
+  font-size: var(--fs-small);
   letter-spacing: 0.1em;
 }
 
 .ctrl__val {
   font-family: var(--mono);
-  font-size: var(--fs-value);
+  font-size: var(--fs-body);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
@@ -523,12 +484,12 @@ body {
   -webkit-appearance: none;
   width: 15px;
   height: 15px;
-  border-radius: 50%;
-  background: var(--ink);
+  background: var(--onBg);
   border: 3px solid var(--bg);
   box-shadow: 0 0 0 1.5px var(--live);
   cursor: grab;
   transition: transform 0.12s ease;
+  transform: rotate(-45deg);
 }
 
 .ctrl--range input[type='range']::-webkit-slider-thumb:active {
@@ -540,7 +501,7 @@ body {
   width: 15px;
   height: 15px;
   border-radius: 50%;
-  background: var(--ink);
+  background: var(--onBg);
   border: 3px solid var(--bg);
   box-shadow: 0 0 0 1.5px var(--live);
   cursor: grab;
@@ -565,7 +526,7 @@ body {
   right: 0;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--ink-dim);
+  color: var(--onBg);
   font-size: 0.8em;
   pointer-events: none;
 }
@@ -575,7 +536,7 @@ body {
   max-width: 60%;
   appearance: none;
   background: none;
-  color: var(--ink);
+  color: var(--onBg);
   border: none;
   border-bottom: 1px solid var(--line);
   border-radius: 0;
@@ -592,3 +553,6 @@ body {
   outline-offset: 2px;
 }
 
+.footer {
+  margin-top: 8rem;
+}

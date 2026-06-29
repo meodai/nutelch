@@ -50,36 +50,25 @@ const EASE: Record<string, (x: number) => number> = {
 const EASE_NAMES = Object.keys(EASE);
 
 const root = document.documentElement;
-// Masthead wordmark: a tapered line-screen (thick at top → thin at bottom) with
-// the title knocked OUT of it via an SVG mask. Inline SVG so the web font loads;
-// stripes use currentColor so they follow --live.
+
 const WM_W = 1400;
 const WM_H = 300;
 const WM_N = 42;
-const WM_DUTY = 0.9; // bar weight as a fraction of the pitch (lower = lighter bars)
-const WM_FADE = 0.6; // where the tail starts easing to zero (fraction of the band)
-const WM_STROKE = 2; // figure bar stroke at full weight; scales down with the taper
+const WM_DUTY = 0.9;
+const WM_FADE = 0.6;
+const WM_STROKE = 2;
 
-// A solid color fill revealed through a stripe-mask, additionally masked by the
-// word so the two layers can be overlaid into a phase-inverted knockout.
-//   'field'  → positive stripes everywhere EXCEPT the word (word cut out).
-//   'figure' → negative stripes (color in the gaps) only INSIDE the word.
 function stripeBand(kind: 'field' | 'figure'): string {
   const pitch = WM_H / WM_N;
-  // `extra` lets the figure's black bars carry a white stroke, which shrinks them
-  // and so thickens the colored stripes inside the word.
   const bars = (fill: string, strokeBase = 0) => {
     let s = '';
     for (let i = 0; i < WM_N; i++) {
       const cy = (i + 0.5) * pitch;
       const x = i / (WM_N - 1);
-      // linear taper, but with the tail smoothstep-eased to zero before the band
-      // edge so the stripes fade out instead of stopping abruptly
       const t = Math.min(Math.max((x - WM_FADE) / (1 - WM_FADE), 0), 1);
       const factor = (1 - x) * (1 - t * t * (3 - 2 * t));
       const w = pitch * WM_DUTY * factor;
       if (w < 0.1) continue;
-      // the stroke (border) tapers with the bars instead of staying constant
       const stroke = strokeBase ? ` stroke="#fff" stroke-width="${(strokeBase * factor).toFixed(3)}"` : '';
       s += `<rect x="0" y="${(cy - w / 2).toFixed(2)}" width="${WM_W}" height="${w.toFixed(2)}" fill="${fill}"${stroke}/>`;
     }
@@ -88,26 +77,24 @@ function stripeBand(kind: 'field' | 'figure'): string {
   const text = (fill: string) =>
     `<text class="wm-text" x="${WM_W / 2}" y="280" text-anchor="middle" fill="${fill}">nutelch</text>`;
 
-  // field: visible = bars (white) MINUS word (black).
-  // figure: visible = inside word (white) MINUS bars (black) → negative stripes;
-  //   the white stroke trims the black bars so those stripes read a bit thicker.
   const maskBody =
     kind === 'field'
       ? bars('#fff') + text('#000')
       : text('#fff') + bars('#000', WM_STROKE);
   const id = `wm-${kind}`;
-  return `<svg viewBox="0 0 ${WM_W} ${WM_H}" class="wordmark-svg" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
+  return `<svg viewBox="0 0 ${WM_W} ${WM_H}" class="wordmark-svg wordmark-svg--${kind}" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
       <defs><mask id="${id}">${maskBody}</mask></defs>
       <rect width="${WM_W}" height="${WM_H}" fill="currentColor" mask="url(#${id})"/>
     </svg>`;
 }
 
-function buildWordmark(host: HTMLElement | null): void {
+function buildWordmark(host: HTMLElement | null, type: 'figure' | 'field'): void {
   if (!host) return;
   // figure underneath, field on top — the field's word-hole reveals the figure.
-  host.innerHTML = stripeBand('figure') + stripeBand('field');
+  host.innerHTML = stripeBand(type);
 }
-buildWordmark(document.getElementById('wordmark'));
+buildWordmark(document.getElementById('wordmark'), 'figure');
+buildWordmark(document.getElementById('wordmark-footer'), 'field');
 
 const versionEl = document.getElementById('version');
 if (versionEl) versionEl.textContent = `v${pkg.version}`;
@@ -122,6 +109,23 @@ const swPct = document.getElementById('sw-pct')!;
 // the pct swatch's name flips with the family (oklch % / lch %); it lives in a
 // sibling under the shared .swatch__item, not inside the cell.
 const bnPct = swPct.closest('.swatch__item')!.querySelector('.bn')!;
+
+// Out-of-gamut badge: a "!" in the swatch's upper-right corner, with the message
+// as its hover title. Toggled per-swatch instead of a single readout line.
+function setGamutFlag(cell: HTMLElement, over: boolean): void {
+  let flag = cell.querySelector<HTMLElement>('.swatch__flag');
+  if (over) {
+    if (!flag) {
+      flag = document.createElement('span');
+      flag.className = 'swatch__flag';
+      flag.textContent = '!';
+      flag.title = 'out of gamut';
+      cell.appendChild(flag);
+    }
+  } else {
+    flag?.remove();
+  }
+}
 
 let family: Family = 'ok';
 let lMax = 1;
@@ -167,12 +171,9 @@ function renderReadout(
     <div class="readout__map ${over ? 'is-over' : ''}">
       relC <b>${relC.toFixed(3)}</b> → C <b>${fmtComp(fam, col.c)}</b>
       <span class="readout__cusp">cusp <b>${fmtComp(fam, peakC)}</b></span>
-      ${over ? '<span class="readout__flag">out of gamut</span>' : ''}
     </div>`;
 }
 
-// The live, copy-pasteable snippet that reproduces the current color. Shows the
-// resolved (post-curve) l/relC, so it stands alone with just relch + the LUT.
 function renderCode(lutName: string, fam: Family, l: number, relC: number, h: number, cssStr: string): void {
   const lArg = fam === 'ok' ? l.toFixed(4) : l.toFixed(2);
   const cArg = relC.toFixed(fam === 'ok' ? 4 : 3);
@@ -187,7 +188,8 @@ function renderCode(lutName: string, fam: Family, l: number, relC: number, h: nu
     `  h: ${Math.round(h)},\n` +
     `});\n` +
     `// → { mode, l, c, h }\n\n` +
-    `toCss(color); // "${cssStr}"`;
+    `toCss(color);\n` +
+    `// "${cssStr}"`;
 }
 
 function render(v: ControlValues): void {
@@ -196,47 +198,41 @@ function render(v: ControlValues): void {
   const fam = familyOf(mode);
   const lut = LUTS[mode][gamut];
 
-  const lParam = v.values.l ?? 0; // raw slider, native scale
+  const lParam = v.values.l ?? 0;
   const h = v.values.h ?? 0;
   const relC = v.values.relC ?? 1;
-  const tParam = lMaxOf(fam) === 1 ? lParam : lParam / 100; // raw normalized L
+  const tParam = lMaxOf(fam) === 1 ? lParam : lParam / 100;
 
-  // Curves are applied to nutelch's input axes only (okhsl / oklch% stay pure).
   const easeL = EASE[v.choices.curveL ?? 'linear'] ?? id;
   const easeC = EASE[v.choices.curveC ?? 'linear'] ?? id;
-  const t = Math.min(Math.max(easeL(tParam), 0), 1); // eased normalized L
-  const lEased = t * lMaxOf(fam); // eased native L
-  const relCe = easeC(Math.min(relC, 1)) + Math.max(relC - 1, 0); // ease the 0..1 part, keep overshoot
+  const t = Math.min(Math.max(easeL(tParam), 0), 1);
+  const lEased = t * lMaxOf(fam);
+  const relCe = easeC(Math.min(relC, 1)) + Math.max(relC - 1, 0);
 
   const col = relch({ lut, l: lEased, relC: relCe, h });
   const peakC = cusp({ lut, l: lEased, h }).c;
 
-  // Global cusp (peak chroma over all L) for this hue, in plot space, plus the
-  // current dot's ray. Feeds the slice's ray line and keeps the "cusp reach"
-  // slider thumb in sync as L/relC move.
   const env = (tt: number) => cusp({ lut, l: tt * lMaxOf(fam), h }).c;
   const peakCusp = findCusp(env);
   const cuspS = sFromPoint(col.c, peakCusp);
   const anchorT = rayAnchorT(t, col.c, peakCusp);
   if (handle) handle.setRange('cuspRay', { value: cuspS });
 
-  // nutelch (center): relC relative to the cusp, with the chosen curves.
-  const cssNut = toCss(col); // dogfood the lib's CSS helper
-  // raw percentage: chroma as an absolute CSS fraction (ignores the cusp), same lightness.
+  const cssNut = toCss(col);
   const cPct = relCe * PCT_REF(fam);
   const cssPct = toCss({ mode: col.mode, l: lEased, c: cPct, h });
-  // OkHSL: pure reference — its own model, fed the RAW params (no nutelch curves).
   const okhsl = okhslCoords(fam, h, Math.min(relC, 1), tParam);
   const hexOkhsl = okhslHex(h, Math.min(relC, 1), tParam);
 
-  // Theme the page with nutelch's live color, plus a contrasting ink for text
-  // drawn on top of it (e.g. selection) — chosen from the color's lightness.
   root.style.setProperty('--live', cssNut);
   root.style.setProperty('--live-ink', t > 0.6 ? 'oklch(0.18 0 0)' : 'oklch(0.97 0 0)');
 
   swNut.style.background = cssNut;
   swPct.style.background = cssPct;
   swOkhsl.style.background = hexOkhsl;
+
+  setGamutFlag(swNut, relC > 1.0001);
+  setGamutFlag(swPct, cPct > peakC * 1.0001);
 
   bnPct.textContent = fam === 'ok' ? 'oklch %' : 'lch %';
 
@@ -248,14 +244,10 @@ function render(v: ControlValues): void {
     lMax: lMaxOf(fam),
     cssColor: (tt, c) => css(fam, tt, c, h),
     lutEnvelope: (tt) => cusp({ lut, l: tt * lMaxOf(fam), h }).c,
-    // Pin the chroma axis to the hue's global cusp (and the % reference) so it
-    // stays put for every in-gamut move; it only grows past that when relC
-    // overshoots the shell (col.c / cPct exceed the cusp).
     cmax: Math.max(peakCusp.c, PCT_REF(fam), col.c, cPct, lMaxOf(fam) === 1 ? 0.05 : 5) * 1.05,
     point: { l: t, c: col.c },
     pctPoint: { l: t, c: cPct },
     pctLabel: fam === 'ok' ? 'oklch%' : 'lch%',
-    // OkHSL is an sRGB + OK model — only place its point on the OK/sRGB slice.
     okhslPoint: fam === 'ok' && gamut === 'srgb' ? { l: okhsl.t, c: okhsl.c } : null,
     okhslLabel: 'okhsl',
     cusp: peakCusp,
@@ -263,13 +255,8 @@ function render(v: ControlValues): void {
   });
 }
 
-// Declared up front (not `const handle = ...`) so render(), which buildControls
-// calls synchronously via emit('init'), can reference it without hitting the TDZ.
 let handle: ReturnType<typeof buildControls>;
 
-// Translate a "cusp reach" slider value into raw L + relC along the current
-// point's ray, inverting whatever easing curves are active so the dot tracks the
-// ray on screen. Mutates the L/relC sliders, then re-renders.
 function applyCuspRay(v: ControlValues): void {
   const mode = v.choices.mode as Mode;
   const fam = familyOf(mode);
@@ -282,7 +269,6 @@ function applyCuspRay(v: ControlValues): void {
   const easeL = EASE[v.choices.curveL ?? 'linear'] ?? id;
   const easeC = EASE[v.choices.curveC ?? 'linear'] ?? id;
 
-  // Current plotted (eased) point, so the ray is anchored where the dot is now.
   const tParam = lMaxOf(fam) === 1 ? (v.values.l ?? 0) : (v.values.l ?? 0) / 100;
   const tNow = Math.min(Math.max(easeL(tParam), 0), 1);
   const relCnow = v.values.relC ?? 1;
@@ -292,7 +278,6 @@ function applyCuspRay(v: ControlValues): void {
   const anchorT = rayAnchorT(tNow, cNow, peakCusp);
   const target = pointAtS(v.values.cuspRay ?? 1, anchorT, peakCusp);
 
-  // Back to raw slider values (undo the easing).
   const rawL = invertEase(easeL, target.t) * lMaxOf(fam);
   const envAtT = env(target.t);
   const relCactual = envAtT > 1e-9 ? target.c / envAtT : 0;
@@ -309,9 +294,6 @@ handle = buildControls(controlsHost, ranges, selects, (v, changed) => {
     return;
   }
   const newFamily = familyOf(v.choices.mode as Mode);
-  // Switching model family rescales the lightness slider to the native L range,
-  // preserving relative position. setRange patches in place (no rebuild), so
-  // focus and scroll position are untouched.
   if (changed === 'mode' && newFamily !== family) {
     const relPos = (v.values.l ?? 0) / lMax;
     const newMax = lMaxOf(newFamily);
@@ -329,9 +311,6 @@ handle = buildControls(controlsHost, ranges, selects, (v, changed) => {
   render(v);
 });
 
-// Live brag: time nutelch's LUT boundary lookup against culori computing the same
-// boundary the honest way, on the user's machine. Run after first paint so it
-// never delays the UI, and keep the workload identical for both contenders.
 function runBenchmark(): void {
   const elSpeed = document.getElementById('brag-speedup');
   const elRate = document.getElementById('brag-rate');
@@ -347,7 +326,6 @@ function runBenchmark(): void {
     hs[i] = (i * 7) % 360;
   }
 
-  // Warm every path so JIT state is comparable.
   let acc = 0;
   for (let i = 0; i < 3000; i++) {
     acc += cusp({ lut, l: ls[i]!, h: hs[i]! }).c;
@@ -356,7 +334,6 @@ function runBenchmark(): void {
     acc += okhslCoords('ok', hs[i]!, 0.7, ls[i]!).c;
   }
 
-  // 1) boundary lookup: nutelch cusp vs culori computing the gamut boundary.
   const t0 = performance.now();
   for (let i = 0; i < N; i++) acc += cusp({ lut, l: ls[i]!, h: hs[i]! }).c;
   const nutMs = performance.now() - t0;
@@ -365,7 +342,6 @@ function runBenchmark(): void {
   for (let i = 0; i < N; i++) acc += actualMaxChroma('ok', ls[i]!, hs[i]!, 'srgb');
   const culMs = performance.now() - t1;
 
-  // 2) boundary-relative color: nutelch relch vs an OkHSL (culori) conversion.
   const t2 = performance.now();
   for (let i = 0; i < N; i++) acc += relch({ lut, l: ls[i]!, relC: 0.7, h: hs[i]! }).c;
   const nut2Ms = performance.now() - t2;
@@ -374,7 +350,7 @@ function runBenchmark(): void {
   for (let i = 0; i < N; i++) acc += okhslCoords('ok', hs[i]!, 0.7, ls[i]!).c;
   const okMs = performance.now() - t3;
 
-  if (acc < 0) console.log(acc); // keep the loops from being optimized away
+  if (acc < 0) console.log(acc);
 
   const fmt = (x: number) => (x >= 10 ? Math.round(x).toString() : x.toFixed(1));
   elSpeed.textContent = fmt(culMs / nutMs);

@@ -13,7 +13,6 @@
     <link rel="stylesheet" href="/src/demo/style.css" />
   </head>
   <body>
-    <div class="grain" aria-hidden="true"></div>
     <main id="app">
       <header class="masthead">
         <span class="version" id="version" aria-hidden="true"></span>
@@ -22,6 +21,27 @@
       </header>
 
       <section class="stage">
+        <aside class="panel">
+          <div class="swatch-wrap">
+            <div id="readout" class="readout"></div>
+            <div class="swatch">
+              <div class="swatch__item">
+                <div class="swatch__cell" id="sw-okhsl"></div>
+                <small class="swatch__label"><b>okhsl</b></small>
+              </div>
+              <div class="swatch__item swatch__item--main">
+                <div class="swatch__cell swatch__cell--main" id="sw-nut"></div>
+                <small class="swatch__label"><b>nuteLch</b></small>
+              </div>
+              <div class="swatch__item">
+                <div class="swatch__cell" id="sw-pct"></div>
+                <small class="swatch__label"><b class="bn"></b></small>
+              </div>
+            </div>
+          </div>
+          <div id="controls" class="controls"></div>
+          <pre class="code" aria-label="code to reproduce the current color"><code id="code"></code></pre>
+        </aside>
         <div class="stage__viz">
           <div id="slice" class="slice-host"></div>
           <p class="explain">
@@ -41,28 +61,11 @@
           </ul>
         </div>
 
-        <aside class="panel">
-          <div class="swatch-wrap">
-            <div class="swatch">
-              <div class="swatch__item">
-                <div class="swatch__cell" id="sw-okhsl"></div>
-                <small class="swatch__label"><b>okhsl</b></small>
-              </div>
-              <div class="swatch__item swatch__item--main">
-                <div class="swatch__cell swatch__cell--main" id="sw-nut"></div>
-                <small class="swatch__label"><b>nuteLch</b></small>
-              </div>
-              <div class="swatch__item">
-                <div class="swatch__cell" id="sw-pct"></div>
-                <small class="swatch__label"><b class="bn"></b></small>
-              </div>
-            </div>
-            <div id="readout" class="readout"></div>
-          </div>
-          <div id="controls" class="controls"></div>
-          <pre class="code" aria-label="code to reproduce the current color"><code id="code"></code></pre>
-        </aside>
       </section>
+
+      <footer class="footer">
+        <div class="wordmark wordmark--footer" id="wordmark-footer"></div>
+      </footer>
 
     </main>
     <script type="module" src="/src/demo/main.ts"></script>
