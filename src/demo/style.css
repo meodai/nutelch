@@ -256,7 +256,7 @@ body {
   opacity: 0.9;
 }
 
-.cusp circle {
+.cusp-mark {
   fill: none;
   stroke: var(--onBg);
   stroke-width: 1.5;

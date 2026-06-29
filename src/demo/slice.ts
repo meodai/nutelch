@@ -29,6 +29,16 @@ const PLOT_H = H - PAD.t - PAD.b;
 const f = (n: number) => n.toFixed(2);
 const fmtPts = (p: Array<[number, number]>) => p.map(([x, y]) => `${f(x)},${f(y)}`).join(' ');
 
+// A diamond (square rotated 45°) centred at (cx,cy); r is the half-diagonal, so it
+// matches the visual size of a circle of radius r. Used for every point marker.
+const diamond = (cls: string, cx: number, cy: number, r: number) =>
+  `<polygon class="${cls}" points="${fmtPts([
+    [cx, cy - r],
+    [cx + r, cy],
+    [cx, cy + r],
+    [cx - r, cy],
+  ])}"/>`;
+
 export function renderSlice(host: HTMLElement, input: SliceInput): void {
   const { hue, lMax, cssColor, lutEnvelope, cmax, point, pctPoint, pctLabel, okhslPoint, okhslLabel } =
     input;
@@ -93,7 +103,7 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
   }
   const cuspLabel = lMax === 1 ? cuspC.toFixed(3) : Math.round(cuspC).toString();
   const cuspMark = `<g class="cusp">
-      <circle cx="${f(X(cuspT))}" cy="${f(Y(cuspC))}" r="4.5"/>
+      ${diamond('cusp-mark', X(cuspT), Y(cuspC), 4.5)}
       <text x="${f(X(cuspT))}" y="${f(Y(cuspC) - 11)}" text-anchor="middle">cusp ${cuspLabel}</text>
     </g>`;
 
@@ -105,7 +115,7 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
     const px = X(pctPoint.l);
     const py = Y(pctPoint.c);
     const label = pctLabel ?? '%';
-    pctMarker = `<circle class="dot-pct" cx="${f(px)}" cy="${f(py)}" r="4.5"/>
+    pctMarker = `${diamond('dot-pct', px, py, 4.5)}
       <text class="dot-pct-label" x="${f(px)}" y="${f(py - 9)}" text-anchor="middle">${label}</text>`;
   }
 
@@ -115,7 +125,7 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
   if (okhslPoint) {
     const px = X(okhslPoint.l);
     const py = Y(okhslPoint.c);
-    okhslMarker = `<circle class="dot-okhsl" cx="${f(px)}" cy="${f(py)}" r="4.5"/>
+    okhslMarker = `${diamond('dot-okhsl', px, py, 4.5)}
       <text class="dot-okhsl-label" x="${f(px)}" y="${f(py + 16)}" text-anchor="middle">${okhslLabel ?? 'okhsl'}</text>`;
   }
 
@@ -136,8 +146,8 @@ export function renderSlice(host: HTMLElement, input: SliceInput): void {
     const py = Y(point.c);
     marker = `<line class="guide" x1="${f(px)}" y1="${f(py)}" x2="${f(px)}" y2="${H - PAD.b}"/>
       <line class="guide" x1="${PAD.l}" y1="${f(py)}" x2="${f(px)}" y2="${f(py)}"/>
-      <circle class="dot-halo" cx="${f(px)}" cy="${f(py)}" r="9"/>
-      <circle class="dot" cx="${f(px)}" cy="${f(py)}" r="5"/>
+      ${diamond('dot-halo', px, py, 9)}
+      ${diamond('dot', px, py, 5)}
       <text class="dot-label" x="${f(px)}" y="${f(py - 13)}" text-anchor="middle">nutelch</text>`;
   }
 
