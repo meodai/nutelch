@@ -1,6 +1,6 @@
 {
   "name": "nutelch",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Chroma relative to the gamut shell (cusp) in OKLCH/LCH. Dependency-free, LUT-backed.",
   "type": "module",
   "author": "David Aerne <meodai@gmail.com>",
