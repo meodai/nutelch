@@ -168,7 +168,7 @@ ask "80% of the chroma available at this tone and hue" without Material's iterat
 
 HCT lives in its own entry point, **`nutelch/hct`**, so its CAM16 conversion never lands
 in an OKLCH/LCH bundle. It exports HCT-aware `cusp`, `relch`, `reach`, `peak` and `toCss`,
-the `hctSrgb` / `hctP3` LUTs, and `hctToRgb`:
+the `hctSrgb` / `hctP3` LUTs, and `hctToRgb` / `rgbToHct`:
 
 - `cusp` / `relch` / `reach` → same as the core, but lightness may be given as `t` (tone)
   *or* `l` — one, not both.
@@ -178,6 +178,9 @@ the `hctSrgb` / `hctP3` LUTs, and `hctToRgb`:
   `Color`) and gives `{ r, g, b }`, gamma-encoded `0..1` in `'srgb'` or `'display-p3'`. Not
   clipped: a channel outside `0..1` means out of gamut; `NaN` means that hue/chroma cannot
   exist at that tone at all.
+- `rgbToHct({ r, g, b }, gamut = 'srgb')` → the inverse: gamma-encoded `0..1` RGB in `'srgb'` or
+  `'display-p3'` to an HCT `Color` (`{ mode: 'hct', h, c, l }`, tone in `l`). Closed form, no
+  solve; it matches Material's `Hct.fromInt` for sRGB and round-trips with `hctToRgb`.
 
 **In HCT, lightness is tone** (Material's `T`, `0..100`). Pass it as `t` — or as `l`,
 nutelch's usual name; they're interchangeable inputs. Where Material writes
@@ -186,13 +189,14 @@ colors keep one shape for every space, so an HCT `Color` carries its tone in **`
 Note the tone is CIE L\*, *not* CAM16's own lightness `J`.
 
 ```js
-import { relch, toCss, hctToRgb, hctSrgb } from 'nutelch/hct';
+import { relch, toCss, hctToRgb, rgbToHct, hctSrgb } from 'nutelch/hct';
 
 const color = relch({ lut: hctSrgb, t: 40, relC: 0.8, h: 280 }); // tone 40
 color.l;         // → 40 (tone, returned as l)
 toCss(color);    // → "oklch(…)" (the same color, in a space CSS understands)
 hctToRgb(color); // → { r, g, b } in sRGB, 0..1
 hctToRgb({ h: 280, c: 30, t: 40 }); // also takes a hand-written HCT color
+rgbToHct({ r: 0.2, g: 0.4, b: 0.8 }); // → { mode: 'hct', h, c, l } — from any RGB color
 ```
 
 CAM16 depends on viewing conditions, so an HCT LUT is only exact for one set. nutelch uses

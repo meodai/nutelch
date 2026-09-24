@@ -12,7 +12,7 @@ import { hctToOklch } from './convert';
 export type { Color, Gamut, Lut, Mode } from '../index';
 export { hctSrgb } from '../luts/hct-srgb';
 export { hctP3 } from '../luts/hct-display-p3';
-export { hctToRgb, type HctInput } from './convert';
+export { hctToRgb, rgbToHct, type HctInput } from './convert';
 // peak() takes no lightness, so the core one serves as is.
 export { peak } from '../index';
 

@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 // inlines the package so Vite resolves them.
 import { Hct } from '@material/material-color-utilities';
 import { converter } from 'culori';
-import { hctToRgb, hctToOklch, xyzToHct, linearRgbToXyz, decode, yFromLstar, lstarFromY } from './convert';
+import { hctToRgb, rgbToHct, hctToOklch, xyzToHct, linearRgbToXyz, decode, yFromLstar, lstarFromY } from './convert';
 
 // Deterministic spread of sRGB colors (LCG) — covers the cube, incl. edges.
 function* samples(n: number) {
@@ -82,5 +82,36 @@ describe('hctToOklch', () => {
       expect(ours.c).toBeCloseTo(want.c, 3);
       if (want.c > 0.02) expect(Math.abs(((ours.h - want.h! + 540) % 360) - 180)).toBeLessThan(0.05);
     }
+  });
+});
+
+describe('rgbToHct', () => {
+  it('matches Material’s Hct.fromInt for sRGB colors', () => {
+    for (const rgb of samples(300)) {
+      const ref = Hct.fromInt(0xff000000 | rgb);
+      const [r, g, b] = channels(rgb);
+      const ours = rgbToHct({ r, g, b });
+      expect(ours.mode).toBe('hct');
+      expect(ours.l).toBeCloseTo(ref.tone, 6);
+      expect(ours.c).toBeCloseTo(ref.chroma, 6);
+      if (ref.chroma > 1) expect(Math.abs(((ours.h - ref.hue + 540) % 360) - 180)).toBeLessThan(1e-6);
+    }
+  });
+
+  it('is the inverse of hctToRgb in sRGB and Display P3', () => {
+    for (const gamut of ['srgb', 'display-p3'] as const) {
+      for (const rgb of samples(200)) {
+        const [r, g, b] = channels(rgb);
+        const back = hctToRgb(rgbToHct({ r, g, b }, gamut), gamut);
+        expect(back.r).toBeCloseTo(r, 6);
+        expect(back.g).toBeCloseTo(g, 6);
+        expect(back.b).toBeCloseTo(b, 6);
+      }
+    }
+  });
+
+  it('P3 red has more chroma than sRGB red (the wider gamut)', () => {
+    const red = { r: 1, g: 0, b: 0 };
+    expect(rgbToHct(red, 'display-p3').c).toBeGreaterThan(rgbToHct(red, 'srgb').c);
   });
 });

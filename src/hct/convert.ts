@@ -143,7 +143,9 @@ export function cam16ToXyz(j: number, c: number, h: number): [number, number, nu
 export function hctToXyz(h: number, c: number, t: number): [number, number, number] {
   const y = yFromLstar(t);
   if (t <= 0) return [0, 0, 0];
-  if (c <= 0 || t >= 100) return [(WHITE[0] * y) / 100, y, (WHITE[2] * y) / 100];
+  // achromatic: the white point scaled to Y. (Unlike Material, tone ≥ 100 with
+  // chroma is still solved — e.g. P3 white is tone 100 with a little HCT chroma.)
+  if (c <= 0) return [(WHITE[0] * y) / 100, y, (WHITE[2] * y) / 100];
   const hue = ((h % 360) + 360) % 360;
   const lnY = Math.log(y);
   const tol = 1e-12;
@@ -205,13 +207,20 @@ export function xyzToLinearRgb(x: number, y: number, z: number, gamut: Gamut): [
       ];
 }
 
-export function linearRgbToXyz(r: number, g: number, b: number): [number, number, number] {
-  // sRGB only (Material's matrix) — used for round-trip tests.
-  return [
-    100 * (0.41233895 * r + 0.35762064 * g + 0.18051042 * b),
-    100 * (0.2126 * r + 0.7152 * g + 0.0722 * b),
-    100 * (0.01932141 * r + 0.11916382 * g + 0.95034478 * b),
-  ];
+// Linear RGB → XYZ (0..100), the inverse of xyzToLinearRgb: sRGB with Material's
+// matrix, Display P3 with the CSS Color 4 matrix.
+export function linearRgbToXyz(r: number, g: number, b: number, gamut: Gamut = 'srgb'): [number, number, number] {
+  return gamut === 'srgb'
+    ? [
+        100 * (0.41233895 * r + 0.35762064 * g + 0.18051042 * b),
+        100 * (0.2126 * r + 0.7152 * g + 0.0722 * b),
+        100 * (0.01932141 * r + 0.11916382 * g + 0.95034478 * b),
+      ]
+    : [
+        100 * (0.4865709486482162 * r + 0.26566769316909306 * g + 0.1982172852343625 * b),
+        100 * (0.2289745640697488 * r + 0.6917385218365064 * g + 0.079286914093745 * b),
+        100 * (0.0 * r + 0.04511338185890264 * g + 1.043944368900976 * b),
+      ];
 }
 
 // sRGB / Display P3 share the sRGB transfer curve; extended to negatives by sign.
@@ -237,6 +246,17 @@ const tone = (color: HctInput): number => (color.t ?? color.l)!;
 export function hctToRgb(color: HctInput, gamut: Gamut = 'srgb'): { r: number; g: number; b: number } {
   const [r, g, b] = xyzToLinearRgb(...hctToXyz(color.h, color.c, tone(color)), gamut);
   return { r: encode(r), g: encode(g), b: encode(b) };
+}
+
+// Gamma-encoded RGB (0..1) in `gamut` → HCT, the inverse of hctToRgb. Closed form
+// (the CAM16 forward model; no solve). Channels outside 0..1 are accepted — they
+// describe colors outside that gamut. Returns a nutelch Color: tone is in `l`.
+export function rgbToHct(
+  { r, g, b }: { r: number; g: number; b: number },
+  gamut: Gamut = 'srgb',
+): { mode: 'hct'; h: number; c: number; l: number } {
+  const { h, c, t } = xyzToHct(...linearRgbToXyz(decode(r), decode(g), decode(b), gamut));
+  return { mode: 'hct', h, c, l: t };
 }
 
 // HCT → OKLCH (L 0..1). Gamut-free, so toCss can emit any HCT color exactly.
