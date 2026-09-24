@@ -8,7 +8,8 @@
 // for the earlier flaw where each candidate was sampled on its own grid.
 import type { Lut } from '../src/luts/decode';
 import { maxChroma } from '../src/interp';
-import { FAMILY, trueMaxChroma, LUT_CASES, type Family, type Gamut } from '../src/eval/ground-truth';
+import { FAMILY, trueMaxChroma, type Family, type Gamut } from '../src/eval/ground-truth';
+import { LUT_CASES } from '../src/eval/lut-cases';
 
 type Lookup = (l: number, h: number) => number;
 

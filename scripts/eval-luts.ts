@@ -1,10 +1,11 @@
-// Accuracy report for the shipped LUTs vs culori ground truth.
+// Accuracy report for the shipped LUTs vs ground truth (culori; nutelch's HCT for hct).
 //   npm run eval:luts
 // Prints, per LUT: worst overshoot/undershoot (as % of cmax and where), mean/p99/
 // rms error, a hue sparkline of the overshoot ridge, and the top offending points.
 import type { Lut } from '../src/luts/decode';
 import { evalLut } from '../src/eval/eval-lut';
-import { LUT_CASES, FAMILY, trueMaxChroma, type Family, type Gamut } from '../src/eval/ground-truth';
+import { FAMILY, trueMaxChroma, type Family, type Gamut } from '../src/eval/ground-truth';
+import { LUT_CASES } from '../src/eval/lut-cases';
 import { maxChroma } from '../src/interp';
 
 const BARS = ' ▁▂▃▄▅▆▇█';
@@ -47,7 +48,7 @@ function topOffenders(lut: Lut, family: Family, gamut: Gamut, n: number) {
   return pts.slice(0, n);
 }
 
-console.log('LUT accuracy vs culori ground truth (error = LUT − truth, + = overshoot)\n');
+console.log('LUT accuracy vs ground truth (error = LUT − truth, + = overshoot)\n');
 
 for (const { name, lut, family, gamut } of LUT_CASES) {
   const r = evalLut(name, lut, family, gamut);

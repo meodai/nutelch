@@ -31,19 +31,41 @@
   ],
   "main": "./dist/nutelch.umd.cjs",
   "module": "./dist/nutelch.js",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/nutelch.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/nutelch.js",
-      "require": "./dist/nutelch.umd.cjs"
+      "import": {
+        "types": "./dist/nutelch.d.ts",
+        "default": "./dist/nutelch.js"
+      },
+      "require": {
+        "types": "./dist/nutelch.d.cts",
+        "default": "./dist/nutelch.umd.cjs"
+      }
+    },
+    "./hct": {
+      "import": {
+        "types": "./dist/hct.d.ts",
+        "default": "./dist/hct.js"
+      },
+      "require": {
+        "types": "./dist/hct.d.cts",
+        "default": "./dist/hct.cjs"
+      }
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "hct": [
+        "./dist/hct.d.ts"
+      ]
     }
   },
   "scripts": {
     "dev": "vite",
     "build:luts": "tsx scripts/build-luts.ts",
     "eval:luts": "tsx scripts/eval-luts.ts",
-    "build:lib": "vite build --config vite.lib.config.ts",
+    "build:lib": "vite build --config vite.lib.config.ts && vite build --config vite.lib.umd.config.ts && tsx scripts/dual-types.ts",
     "build:demo": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
@@ -52,6 +74,7 @@
     "prepublishOnly": "npm run typecheck && npm test && npm run build:lib"
   },
   "devDependencies": {
+    "@material/material-color-utilities": "^0.4.0",
     "@types/node": "^22.0.0",
     "culori": "^4.0.1",
     "tsx": "^4.19.0",

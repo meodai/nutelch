@@ -1,6 +1,5 @@
 import { clampChroma, converter, formatHex } from 'culori';
-
-type Gamut = 'srgb' | 'display-p3';
+import type { Gamut } from '../luts/decode';
 
 const RGB_GAMUT: Record<Gamut, string> = { srgb: 'rgb', 'display-p3': 'p3' };
 const CFG = {

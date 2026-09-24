@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { evalLut, probe } from './eval/eval-lut';
-import { LUT_CASES } from './eval/ground-truth';
+import { LUT_CASES } from './eval/lut-cases';
 import { oklchSrgb } from './luts';
 
 // Characterization + ratchet for the adaptive (non-uniform) LUTs. Breakpoints are
@@ -24,6 +24,16 @@ const RATCHET: Record<string, { overshoot: number; undershoot: number }> = {
   // LUT resolves. These match the long-standing uniform behavior.
   lchSrgb: { overshoot: 0.215, undershoot: -0.205 },
   lchP3: { overshoot: 0.228, undershoot: -0.302 },
+  // LCHuv is uniform, like LCH, and the most accurate family measured (mean
+  // error ~0.03%). Its worst undershoot sits at the yellow tip (L≈97, h≈82).
+  lchuvSrgb: { overshoot: 0.0085, undershoot: -0.09 },
+  lchuvP3: { overshoot: 0.007, undershoot: -0.057 },
+  // HCT is adaptive, like OKLCH. Tone is CIE L*, so HCT inherits LCH's near-
+  // singular yellow-white tip (tone ≈ 99, h ≈ 114) — that is where the maxima sit.
+  // A uniform 65×256 grid was measured too: lower mean (0.11% vs 0.20%) but worse
+  // worst-case overshoot (19.6% vs 13.6% on sRGB) at ~1.8× the size.
+  hctSrgb: { overshoot: 0.137, undershoot: -0.129 },
+  hctP3: { overshoot: 0.081, undershoot: -0.11 },
 };
 
 describe('LUT boundary accuracy (ratchet — only ever tighten)', () => {

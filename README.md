@@ -1,12 +1,12 @@
 # nutelch
 
-Chroma relative to the gamut **shell** (the cusp) in OKLCH / LCH.
+Chroma relative to the gamut **shell** (the cusp) in OKLCH / LCH / LCHuv — plus HCT as an opt-in add-on.
 A *nut* is a "Schalenfrucht" — it has a hull; so does a perceptual color space.
 nutelch lets you say "halfway to the boundary" (`relC: 0.5`) at any lightness and hue.
 
 Dependency-free at runtime: gamut boundaries are precomputed into compact LUTs
 (culori is a build-time dependency only) and looked up with bilinear interpolation.
-The OKLCH LUTs are **adaptive** — their grid lines bunch around the cusps, where the
+The OKLCH and HCT LUTs are **adaptive** — their grid lines bunch around the cusps, where the
 boundary bends, and thin out where it's near-linear — so they track the shell ~3×
 more accurately than a uniform grid while staying *smaller*. See
 [Adaptive LUTs](#adaptive-luts-why-the-grid-is-non-uniform).
@@ -22,7 +22,7 @@ per-lightness gamut shell — and keeps **everything else** from OKLCH:
 | **Lightness**    | raw OKLab `L`        | **raw OKLab `L`**                          | toe-remapped                       |
 | **Hue**          | raw `H`              | **raw `H`**                               | raw `H`                            |
 | **Output**       | CSS `oklch()`        | **CSS `oklch()`**                         | needs conversion                   |
-| **Gamuts**       | gamut-agnostic       | **sRGB + Display-P3** (OKLCH & LCH LUTs)  | sRGB only                          |
+| **Gamuts**       | gamut-agnostic       | **sRGB + Display-P3** (OKLCH, LCH, LCHuv & HCT LUTs) | sRGB only               |
 | **Speed**        | instant (gamut-blind) | **fast (LUT lookup)**                    | slowest (runtime gamut math)       |
 | **Out of gamut** | allowed              | **allowed (overshoot)**                   | clamped to `[0, 1]`                |
 
@@ -45,10 +45,22 @@ Two consequences:
 npm install nutelch
 ```
 
+Two entry points, both tree-shakeable and dependency-free:
+
+| import                | what                                                    |
+| --------------------- | ------------------------------------------------------- |
+| `nutelch`             | the core: OKLCH, CIE LCH and LCHuv LUTs + all functions |
+| `nutelch/hct`         | the HCT add-on (CAM16 conversion), see [HCT](#hct)       |
+
+Each ships as ESM and CommonJS (`import` / `require`) with TypeScript types for both, so
+it resolves under every `moduleResolution` (`bundler`, `node16`/`nodenext` from ESM *or*
+CJS, and legacy `node10`). The core is also available as a UMD bundle
+(`dist/nutelch.umd.cjs`, global `nutelch`) for script tags.
+
 ## Usage
 
 ```js
-import { cusp, relch, toCss, toLab, oklchSrgb, lchP3 } from 'nutelch';
+import { cusp, relch, peak, reach, toCss, toLab, oklchSrgb, lchP3, lchuvSrgb } from 'nutelch';
 
 // You pass the gamut LUT you want; it carries the space (mode) + lightness range.
 // Import only the ones you use — the rest are tree-shaken away.
@@ -68,6 +80,12 @@ toCss(relch({ lut: oklchSrgb, l: 0.6, relC: 0.5, h: 30 }));
 // A different space + gamut is just a different LUT. LCH (CIE) uses L on 0..100:
 relch({ lut: lchP3, l: 60, relC: 1, h: 30 });
 // → { mode: 'lch', l: 60, c: …, h: 30 }
+
+// LCHuv (polar CIELUV) too; toCss emits it as the equivalent lch():
+toCss(relch({ lut: lchuvSrgb, l: 60, relC: 0.5, h: 30 }));
+// → "lch(60% … …)"
+
+// HCT (Material) is a separate entry point, 'nutelch/hct' — see #hct.
 
 // The cusp — the most chromatic color of a hue (peak of the shell over all L):
 peak({ lut: oklchSrgb, h: 30 });
@@ -97,7 +115,10 @@ toLab(relch({ lut: oklchSrgb, l: 0.6, relC: 1, h: 30 }));
   `l` to the cusp. `reach` 0 = that gray, 1 = the cusp (overshoot allowed). Moves `l` and
   `c` together — the complement to `relch`.
 - `toCss(color)` → a CSS string in the color's own space (`oklch(l c h)` / `lch(l% c h)`),
-  float noise trimmed. Pass it the object `cusp`/`relch`/`peak`/`reach` return.
+  float noise trimmed. Pass it the object `cusp`/`relch`/`peak`/`reach` return. CSS has no
+  LUV syntax, so an `lchuv` color is converted exactly to the equivalent `lch(…)` (both are
+  D50 and share L\*). For HCT colors use the `toCss` from `nutelch/hct`; the core one
+  throws on them.
 - `toLab({ l, c, h })` → `{ l, a, b }` — rectangular conversion for `oklab()`/`lab()` output.
 - `toe(x)` / `toeInv(x)` → Ottosson's lightness toe and its inverse (the OkHSL `Lr`
   remap), both mapping `[0,1]→[0,1]`. Opt-in utilities — feed `toeInv` to a lightness
@@ -106,17 +127,83 @@ toLab(relch({ lut: oklchSrgb, l: 0.6, relC: 1, h: 30 }));
   general-purpose curve the lib ships; apply your own for anything else.
 
 The returned `mode` and the lightness range come from the LUT you pass. The available
-LUTs are named `<space><Gamut>`:
+LUTs are named `<space><Gamut>`. `l`, `c` and `h` always mean *that space's* lightness,
+chroma and hue — which, for HCT, makes `l` the **tone**:
 
-| LUT          | space   | gamut        | L range |
-| ------------ | ------- | ------------ | ------- |
-| `oklchSrgb`  | `oklch` | `srgb`       | 0..1    |
-| `oklchP3`    | `oklch` | `display-p3` | 0..1    |
-| `lchSrgb`    | `lch`   | `srgb`       | 0..100  |
-| `lchP3`      | `lch`   | `display-p3` | 0..100  |
+| LUT          | space   | gamut        | `l` is…                  | `l` range | `c`, `h` are…     |
+| ------------ | ------- | ------------ | ------------------------ | --------- | ----------------- |
+| `oklchSrgb`  | `oklch` | `srgb`       | OKLab lightness          | 0..1      | OKLCH C, H        |
+| `oklchP3`    | `oklch` | `display-p3` | OKLab lightness          | 0..1      | OKLCH C, H        |
+| `lchSrgb`    | `lch`   | `srgb`       | CIE L\*                  | 0..100    | CIE LCH C, H      |
+| `lchP3`      | `lch`   | `display-p3` | CIE L\*                  | 0..100    | CIE LCH C, H      |
+| `lchuvSrgb`  | `lchuv` | `srgb`       | CIE L\*                  | 0..100    | CIELUV C, H (D50) |
+| `lchuvP3`    | `lchuv` | `display-p3` | CIE L\*                  | 0..100    | CIELUV C, H (D50) |
+| `hctSrgb`¹   | `hct`   | `srgb`       | **tone** (= CIE L\*)     | 0..100    | CAM16 chroma, hue |
+| `hctP3`¹     | `hct`   | `display-p3` | **tone** (= CIE L\*)     | 0..100    | CAM16 chroma, hue |
+
+¹ from `nutelch/hct`, see [HCT](#hct).
 
 Import only the LUTs you need (each is tree-shakeable; the package is side-effect-free).
 Input is always cylindrical (`l`, `h`, `relC`); `H` is `0..360` and wraps.
+
+### LCHuv
+
+LCHuv is the polar form of CIELUV — the space Wijffelaars et al. use in
+[*Generating Color Palettes using Intuitive Parameters*](https://doi.org/10.1111/j.1467-8659.2008.01203.x)
+(Computer Graphics Forum 27(3), EuroVis 2008), where the most saturated color of each hue anchors the palette curve.
+nutelch's LCHuv uses a **D50** white, matching culori (which builds the LUTs) and CSS
+`lch()` — that's what makes the `toCss` conversion exact. HSLuv and many screen-oriented
+LUV implementations use **D65** instead, so their chroma/hue values differ slightly.
+
+It is the most accurate family nutelch ships: mean boundary error ~0.03% of `cmax`,
+worst overshoot 0.8% (sRGB) / 0.6% (P3). Like CIE LCH it uses a uniform grid; an adaptive
+one halved the undershoot but doubled the overshoot, the harmful direction.
+
+### HCT
+
+[HCT](https://material.io/blog/science-of-color-design) is Material Design's color space:
+**hue and chroma are CAM16's**, **tone is CIE L\***. Because tone depends on luminance
+alone, a tone gap maps to a WCAG contrast ratio, whatever the hue. The HCT LUTs let you
+ask "80% of the chroma available at this tone and hue" without Material's iterative solver.
+
+HCT lives in its own entry point, **`nutelch/hct`**, so its CAM16 conversion never lands
+in an OKLCH/LCH bundle. It exports HCT-aware `cusp`, `relch`, `reach`, `peak` and `toCss`,
+the `hctSrgb` / `hctP3` LUTs, and `hctToRgb`:
+
+- `cusp` / `relch` / `reach` → same as the core, but lightness may be given as `t` (tone)
+  *or* `l` — one, not both.
+- `toCss(color)` → CSS has no HCT syntax, so an `hct` color is converted exactly (no gamut
+  clipping) and emitted as `oklch(…)`; `oklch`/`lch` colors format as in the core.
+- `hctToRgb(color, gamut = 'srgb')` → takes `{ h, c, t }` or `{ h, c, l }` (e.g. a returned
+  `Color`) and gives `{ r, g, b }`, gamma-encoded `0..1` in `'srgb'` or `'display-p3'`. Not
+  clipped: a channel outside `0..1` means out of gamut; `NaN` means that hue/chroma cannot
+  exist at that tone at all.
+
+**In HCT, lightness is tone** (Material's `T`, `0..100`). Pass it as `t` — or as `l`,
+nutelch's usual name; they're interchangeable inputs. Where Material writes
+`Hct.from(hue, chroma, tone)`, nutelch takes `{ h: hue, c: chroma, t: tone }`. Returned
+colors keep one shape for every space, so an HCT `Color` carries its tone in **`.l`**.
+Note the tone is CIE L\*, *not* CAM16's own lightness `J`.
+
+```js
+import { relch, toCss, hctToRgb, hctSrgb } from 'nutelch/hct';
+
+const color = relch({ lut: hctSrgb, t: 40, relC: 0.8, h: 280 }); // tone 40
+color.l;         // → 40 (tone, returned as l)
+toCss(color);    // → "oklch(…)" (the same color, in a space CSS understands)
+hctToRgb(color); // → { r, g, b } in sRGB, 0..1
+hctToRgb({ h: 280, c: 30, t: 40 }); // also takes a hand-written HCT color
+```
+
+CAM16 depends on viewing conditions, so an HCT LUT is only exact for one set. nutelch uses
+Material's defaults (D65, adapting luminance ≈ 11.7 cd/m², background L\* 50, average
+surround), so values agree with `@material/material-color-utilities`. The conversion is
+nutelch's own (`src/hct/convert.ts`, sources cited there) and is tested against Material.
+
+Accuracy vs the true HCT boundary (`npm run eval:luts`, fractions of `cmax`): mean error
+~0.2%; the worst over/undershoot (~14% sRGB, ~8% P3) sits at the yellow-white tip near
+tone 99 — the same near-singular corner as CIE LCH, since tone *is* L\*. A uniform grid was
+measured too and overshot more (~20%), so HCT uses the adaptive grid like OKLCH.
 
 ### `reach`: saturating toward the cusp
 
@@ -220,6 +307,13 @@ over breakpoints instead of a direct index). The cusp-triangle is far smaller/fa
 but its straight edges can't follow the curved gamut (rms ~1.8%), and a higher-res
 uniform grid never fixes the overshoot at a useful size.
 
+**HCT is adaptive too:** it behaves like OKLCH here — a uniform 65×256 grid had a
+lower mean error but a worse worst-case overshoot (19.6% vs 13.6% on sRGB) at ~1.8×
+the size. See [HCT](#hct).
+
+**LCHuv is uniform too:** adaptive 49×192 cut its worst undershoot to −2.6% (from −8.7%)
+but doubled the overshoot to 1.6% (from 0.8%); overshoot is what matters. See [LCHuv](#lchuv).
+
 **Why CIE LCH stays uniform:** LCH's gamut is broadly curved *everywhere*, so a sparse
 adaptive grid starves the smooth bulk (rms blows up ~5×). A uniform grid is the better
 fit there; its only large errors are at the near-singular yellow-white cusp.
@@ -234,17 +328,37 @@ boundary error for the OKLCH LUTs is `±0.009` (the demo measures this live).
 
 ```bash
 npm install
-npm run build:luts   # regenerate LUTs from culori (adaptive OKLCH + uniform LCH)
-npm run eval:luts    # accuracy report: LUT vs culori boundary, per LUT
+npm run build:luts   # regenerate all LUTs (adaptive OKLCH + HCT, uniform LCH + LCHuv)
+npm run build:luts -- hct   # only some families: ok, cie, luv, hct (HCT alone takes ~9 min)
+npm run eval:luts    # accuracy report: LUT vs ground-truth boundary, per LUT
 npm test
-npm run dev          # interactive cusp explorer (compares LUT vs actual vs OkHSL)
-npm run build:lib    # publishable dist/
+npm run dev          # interactive cusp explorer: oklch / lch / lchuv / hct (compares vs OkHSL)
+npm run build:lib    # publishable dist/ (see below)
 ```
+
+`build:lib` runs three steps:
+
+1. `vite.lib.config.ts` builds both entries (`nutelch`, `nutelch/hct`) as ESM + CJS, with
+   shared code in a common chunk, and rolls each entry's types into one `.d.ts`.
+2. `vite.lib.umd.config.ts` adds the core's UMD bundle (Vite's UMD output is single-entry).
+3. `scripts/dual-types.ts` copies each `.d.ts` to a `.d.cts`: the package is
+   `"type": "module"`, so CJS consumers need `.d.cts` types, which the `require`
+   conditions in `exports` point at. `npx @arethetypeswrong/cli --pack .` verifies it.
+
+Ground truth for the build, the report and the tests lives in `src/eval/ground-truth.ts`
+(culori for OKLCH / LCH / LCHuv; `src/hct/convert.ts` for HCT). The build imports no LUT
+file, so a new family builds from scratch; add it to `src/eval/lut-cases.ts` and the
+accuracy ratchet in `src/interp.accuracy.test.ts` to have it measured and guarded.
 
 ## Acknowledgements
 
 The core idea — measuring chroma relative to the gamut cusp — and much of the guidance
 shaping this library are thanks to [Matt DesLauriers](https://github.com/mattdesl).
+
+The HCT conversion follows Google's
+[material-color-utilities](https://github.com/material-foundation/material-color-utilities)
+(Apache-2.0) and the CAM16 paper (Li et al., *Color Res. Appl.* 42(6), 2017,
+[doi:10.1002/col.22131](https://doi.org/10.1002/col.22131)); full citations are in `src/hct/convert.ts`.
 
 ## License
 

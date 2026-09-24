@@ -1,5 +1,7 @@
-import { cusp, relch, toCss, toe, toeInv, smoothstep, type Mode } from '../index';
-import { oklchSrgb, oklchP3, lchSrgb, lchP3 } from '../luts';
+import { cusp, relch, toe, toeInv, smoothstep, type Color, type Gamut, type Mode } from '../index';
+// The hct entry's toCss also formats oklch/lch, so the demo uses it for every mode.
+import { toCss, hctSrgb, hctP3 } from '../hct';
+import { oklchSrgb, oklchP3, lchSrgb, lchP3, lchuvSrgb, lchuvP3 } from '../luts';
 import {
   buildControls,
   type ControlValues,
@@ -11,11 +13,11 @@ import { okhslHex, okhslCoords, actualMaxChroma } from './actual';
 import { findCusp, sFromPoint, rayAnchorT, pointAtS, invertEase } from './cuspray';
 import pkg from '../../package.json';
 
-type Family = 'ok' | 'cie';
-type Gamut = 'srgb' | 'display-p3';
+type Family = 'ok' | 'cie' | 'luv' | 'hct';
 
-const MODES: Mode[] = ['oklch', 'lch'];
-const familyOf = (m: Mode): Family => (m === 'oklch' ? 'ok' : 'cie');
+const MODES: Mode[] = ['oklch', 'lch', 'lchuv', 'hct'];
+const FAMILY_OF: Record<Mode, Family> = { oklch: 'ok', lch: 'cie', lchuv: 'luv', hct: 'hct' };
+const familyOf = (m: Mode): Family => FAMILY_OF[m];
 const lMaxOf = (fam: Family) => (fam === 'ok' ? 1 : 100);
 
 // The demo lets the user pick mode + gamut, then hands the matching LUT to the
@@ -23,14 +25,23 @@ const lMaxOf = (fam: Family) => (fam === 'ok' ? 1 : 100);
 const LUTS = {
   oklch: { srgb: oklchSrgb, 'display-p3': oklchP3 },
   lch: { srgb: lchSrgb, 'display-p3': lchP3 },
+  lchuv: { srgb: lchuvSrgb, 'display-p3': lchuvP3 },
+  hct: { srgb: hctSrgb, 'display-p3': hctP3 },
 } as const;
 // Importable names for each LUT, for the live code snippet.
 const LUT_NAME: Record<Mode, Record<Gamut, string>> = {
   oklch: { srgb: 'oklchSrgb', 'display-p3': 'oklchP3' },
   lch: { srgb: 'lchSrgb', 'display-p3': 'lchP3' },
+  lchuv: { srgb: 'lchuvSrgb', 'display-p3': 'lchuvP3' },
+  hct: { srgb: 'hctSrgb', 'display-p3': 'hctP3' },
 };
-// CSS percentage reference for chroma: oklch 100% = 0.4, lch 100% = 150.
+// CSS percentage reference for chroma: oklch 100% = 0.4, lch 100% = 150. HCT has
+// no CSS form; 150 is used as its "naive fixed-scale chroma" reference too.
 const PCT_REF = (fam: Family) => (fam === 'ok' ? 0.4 : 150);
+const PCT_LABEL: Record<Family, string> = { ok: 'oklch %', cie: 'lch %', luv: 'lchuv %', hct: 'hct %' };
+
+// toCss of an HCT color that cannot exist (NaN) is not valid CSS; show nothing.
+const safeCss = (s: string) => (s.includes('NaN') ? 'transparent' : s);
 
 // Demo-local easing functions. The LIB ships none of these — easing is the
 // caller's concern, applied to whatever axis you like by transforming the
@@ -147,15 +158,18 @@ const selects: SelectSpec[] = [
 ];
 
 // Faithful CSS for the active family. `t` is normalized lightness 0..1.
+// LCHuv and HCT have no CSS syntax, so they go through the lib's toCss (→ lch() / oklch()).
 const css = (fam: Family, t: number, c: number, h: number) =>
   fam === 'ok'
     ? `oklch(${t.toFixed(4)} ${c.toFixed(4)} ${h})`
-    : `lch(${(t * 100).toFixed(2)}% ${c.toFixed(3)} ${h})`;
+    : fam === 'cie'
+      ? `lch(${(t * 100).toFixed(2)}% ${c.toFixed(3)} ${h})`
+      : safeCss(toCss({ mode: fam === 'luv' ? 'lchuv' : 'hct', l: t * 100, c, h }));
 
 const fmtComp = (fam: Family, v: number) => (fam === 'ok' ? v.toFixed(4) : v.toFixed(2));
 
 function renderReadout(
-  col: { mode: Mode; l: number; c: number; h: number },
+  col: Color,
   fam: Family,
   relC: number,
   peakC: number,
@@ -183,7 +197,7 @@ function renderCode(lutName: string, fam: Family, l: number, relC: number, h: nu
     `} from 'nutelch';\n\n` +
     `const color = relch({\n` +
     `  lut: ${lutName},\n` +
-    `  l: ${lArg},\n` +
+    `  ${fam === 'hct' ? 't' : 'l'}: ${lArg},${fam === 'hct' ? ' // tone' : ''}\n` +
     `  relC: ${cArg},\n` +
     `  h: ${Math.round(h)},\n` +
     `});\n` +
@@ -218,10 +232,11 @@ function render(v: ControlValues): void {
   const anchorT = rayAnchorT(t, col.c, peakCusp);
   if (handle) handle.setRange('cuspRay', { value: cuspS });
 
-  const cssNut = toCss(col);
+  const cssNut = safeCss(toCss(col));
   const cPct = relCe * PCT_REF(fam);
-  const cssPct = toCss({ mode: col.mode, l: lEased, c: cPct, h });
-  const okhsl = okhslCoords(fam, h, Math.min(relC, 1), tParam);
+  const cssPct = safeCss(toCss({ mode: col.mode, l: lEased, c: cPct, h }));
+  // OkHSL is only plotted in the OKLCH family (see okhslPoint below).
+  const okhsl = okhslCoords(fam === 'ok' ? 'ok' : 'cie', h, Math.min(relC, 1), tParam);
   const hexOkhsl = okhslHex(h, Math.min(relC, 1), tParam);
 
   root.style.setProperty('--live', cssNut);
@@ -234,7 +249,7 @@ function render(v: ControlValues): void {
   setGamutFlag(swNut, relC > 1.0001);
   setGamutFlag(swPct, cPct > peakC * 1.0001);
 
-  bnPct.textContent = fam === 'ok' ? 'oklch %' : 'lch %';
+  bnPct.textContent = PCT_LABEL[fam];
 
   renderReadout(col, fam, relC, peakC);
   renderCode(LUT_NAME[mode][gamut], fam, lEased, relCe, h, cssNut);
@@ -247,7 +262,7 @@ function render(v: ControlValues): void {
     cmax: Math.max(peakCusp.c, PCT_REF(fam), col.c, cPct, lMaxOf(fam) === 1 ? 0.05 : 5) * 1.05,
     point: { l: t, c: col.c },
     pctPoint: { l: t, c: cPct },
-    pctLabel: fam === 'ok' ? 'oklch%' : 'lch%',
+    pctLabel: PCT_LABEL[fam].replace(' ', ''),
     okhslPoint: fam === 'ok' && gamut === 'srgb' ? { l: okhsl.t, c: okhsl.c } : null,
     okhslLabel: 'okhsl',
     cusp: peakCusp,

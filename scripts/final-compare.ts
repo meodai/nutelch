@@ -6,7 +6,8 @@
 import type { Lut } from '../src/luts/decode';
 import { maxChroma } from '../src/interp';
 import { evalLut } from '../src/eval/eval-lut';
-import { LUT_CASES, FAMILY, trueMaxChroma, type Family, type Gamut } from '../src/eval/ground-truth';
+import { FAMILY, trueMaxChroma, type Family, type Gamut } from '../src/eval/ground-truth';
+import { LUT_CASES } from '../src/eval/lut-cases';
 
 function buildUniform(family: Family, gamut: Gamut, lSteps: number, hSteps: number): Lut {
   const lMax = FAMILY[family].lMax;

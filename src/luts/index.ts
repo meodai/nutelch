@@ -4,4 +4,6 @@ export { oklchSrgb } from './oklch-srgb';
 export { oklchP3 } from './oklch-display-p3';
 export { lchSrgb } from './lch-srgb';
 export { lchP3 } from './lch-display-p3';
-export type { Lut, Mode } from './decode';
+export { lchuvSrgb } from './lchuv-srgb';
+export { lchuvP3 } from './lchuv-display-p3';
+export type { Gamut, Lut, Mode } from './decode';

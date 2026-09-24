@@ -1,7 +1,8 @@
-import { clampChroma } from 'culori';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { trueMaxChroma, type Family, type Gamut } from '../src/eval/ground-truth';
+import type { Mode } from '../src/luts/decode';
 
 // LUT sampling strategy is per family — measured, not assumed (see
 // scripts/final-compare.ts):
@@ -10,6 +11,9 @@ import { dirname, join } from 'node:path';
 //    curves most (the cusps) and thin out where it is near-linear, so a 49×192
 //    grid tracks the shell far better than a uniform one — and smaller. Practical
 //    overshoot drops ~3× vs the old uniform grid.
+//  • HCT → ADAPTIVE, like OKLCH (lower worst-case overshoot than uniform).
+//  • CIE LCHuv → UNIFORM, like LCH: adaptive halves the undershoot but doubles
+//    the overshoot (1.6% vs 0.8% of cmax), and overshoot is the harmful direction.
 //  • CIE LCH → UNIFORM grid. LCH's gamut is broadly curved everywhere, so spreading
 //    a sparse adaptive grid starves the smooth bulk (rms blows up 5×). A uniform
 //    65×256 grid is the better fit; its only large errors are at the near-singular
@@ -23,20 +27,16 @@ const UNIFORM_H = 256; // CIE LCH H nodes
 const PL = 513;
 const PH = 1440;
 
-type Family = 'ok' | 'cie';
-type Gamut = 'srgb' | 'display-p3';
-
-const RGB_GAMUT: Record<Gamut, string> = { srgb: 'rgb', 'display-p3': 'p3' };
-const CFG: Record<Family, { mode: 'oklch' | 'lch'; lMax: number; ceiling: number; adaptive: boolean }> = {
-  ok: { mode: 'oklch', lMax: 1, ceiling: 0.5, adaptive: true }, // above any sRGB/P3 OKLCH chroma
-  cie: { mode: 'lch', lMax: 100, ceiling: 160, adaptive: false }, // above any sRGB/P3 LCH chroma
+const CFG: Record<Family, { mode: Mode; lMax: number; adaptive: boolean }> = {
+  ok: { mode: 'oklch', lMax: 1, adaptive: true },
+  cie: { mode: 'lch', lMax: 100, adaptive: false },
+  luv: { mode: 'lchuv', lMax: 100, adaptive: false }, // uniform: half the overshoot of adaptive (0.8% vs 1.6%)
+  hct: { mode: 'hct', lMax: 100, adaptive: true },
 };
 
-function boundary(family: Family, gamut: Gamut, l: number, h: number): number {
-  const { mode, ceiling } = CFG[family];
-  const clamped = clampChroma({ mode, l, c: ceiling, h } as never, mode, RGB_GAMUT[gamut]);
-  return (clamped as { c?: number }).c ?? 0;
-}
+// Boundary chroma — the same ground truth the eval harness and tests measure
+// against (culori for OKLCH/LCH, src/hct/convert.ts for HCT).
+const boundary = trueMaxChroma;
 
 // Place `count` ascending breakpoints over [0, axisMax] whose spacing follows the
 // inverse of `importance` — equal cumulative importance per interval, so nodes
@@ -132,8 +132,9 @@ interface Sampled {
 
 function sample(family: Family, gamut: Gamut): Sampled {
   const { lMax, adaptive } = CFG[family];
-  const lbp = adaptive ? breakpoints(family, gamut).lbp : uniformAxis(lMax, UNIFORM_L, false);
-  const hbp = adaptive ? breakpoints(family, gamut).hbp : uniformAxis(360, UNIFORM_H, true);
+  const bp = adaptive ? breakpoints(family, gamut) : undefined;
+  const lbp = bp ? bp.lbp : uniformAxis(lMax, UNIFORM_L, false);
+  const hbp = bp ? bp.hbp : uniformAxis(360, UNIFORM_H, true);
   const lSteps = lbp.length;
   const hSteps = hbp.length;
   const raw = new Float64Array(lSteps * hSteps);
@@ -165,16 +166,25 @@ function sample(family: Family, gamut: Gamut): Sampled {
 const NAMES: Record<Family, Record<Gamut, string>> = {
   ok: { srgb: 'oklchSrgb', 'display-p3': 'oklchP3' },
   cie: { srgb: 'lchSrgb', 'display-p3': 'lchP3' },
+  luv: { srgb: 'lchuvSrgb', 'display-p3': 'lchuvP3' },
+  hct: { srgb: 'hctSrgb', 'display-p3': 'hctP3' },
 };
 const FILES: Record<Family, Record<Gamut, string>> = {
   ok: { srgb: 'oklch-srgb.ts', 'display-p3': 'oklch-display-p3.ts' },
   cie: { srgb: 'lch-srgb.ts', 'display-p3': 'lch-display-p3.ts' },
+  luv: { srgb: 'lchuv-srgb.ts', 'display-p3': 'lchuv-display-p3.ts' },
+  hct: { srgb: 'hct-srgb.ts', 'display-p3': 'hct-display-p3.ts' },
 };
+
+// `npm run build:luts -- hct` rebuilds one family only (HCT is slow: no closed-form
+// boundary, every probe is a bisection over an iterative HCT → RGB solve).
+const only = process.argv.slice(2) as Family[];
+const families = only.length ? only : (['ok', 'cie', 'luv', 'hct'] as Family[]);
 
 const outDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'luts');
 mkdirSync(outDir, { recursive: true });
 
-for (const family of ['ok', 'cie'] as Family[]) {
+for (const family of families) {
   for (const gamut of ['srgb', 'display-p3'] as Gamut[]) {
     const { b64, lbpB64, hbpB64, cmax, lSteps, hSteps } = sample(family, gamut);
     const name = NAMES[family][gamut];

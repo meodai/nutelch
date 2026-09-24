@@ -1,4 +1,6 @@
-export type Mode = 'oklch' | 'lch';
+export type Mode = 'oklch' | 'lch' | 'lchuv' | 'hct';
+// The RGB gamut a LUT's boundary was computed for (also hctToRgb's target).
+export type Gamut = 'srgb' | 'display-p3';
 
 // A self-describing lookup table: it carries the cylindrical space it belongs to
 // and that space's native lightness range, so consumers pass the LUT itself
@@ -9,8 +11,8 @@ export type Mode = 'oklch' | 'lch';
 // (cusps) and sparsely where it is near-linear. A LUT without breakpoints is
 // treated as a uniform grid (back-compat) — positions are then implicit.
 export interface Lut {
-  mode: Mode; // 'oklch' | 'lch' — also the mode returned by cusp/relch
-  lMax: number; // native lightness max: 1 for oklch, 100 for lch
+  mode: Mode; // 'oklch' | 'lch' | 'lchuv' | 'hct' — also the mode returned by cusp/relch
+  lMax: number; // native lightness max: 1 for oklch, 100 for lch, lchuv and hct (tone)
   cmax: number; // observed max chroma (the decode scale)
   lSteps: number;
   hSteps: number;

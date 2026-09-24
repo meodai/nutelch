@@ -1,9 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { clampChroma } from 'culori';
-import { cusp, relch, peak, reach, toCss, toLab, oklchSrgb, oklchP3, lchSrgb, lchP3 } from './index';
+import { clampChroma, converter, displayable } from 'culori';
+import {
+  cusp, relch, peak, reach, toCss, toLab,
+  oklchSrgb, oklchP3, lchSrgb, lchP3, lchuvSrgb, lchuvP3,
+} from './index';
 
 // Ground-truth boundary chroma via culori, matching the build script.
-function actualMax(mode: 'oklch' | 'lch', l: number, h: number, rgbGamut: string, ceiling: number) {
+function actualMax(mode: 'oklch' | 'lch' | 'lchuv', l: number, h: number, rgbGamut: string, ceiling: number) {
   const clamped = clampChroma({ mode, l, c: ceiling, h } as never, mode, rgbGamut);
   return (clamped as { c?: number }).c ?? 0;
 }
@@ -148,5 +151,43 @@ describe('toLab', () => {
     const lab = toLab(col);
     expect(lab.l).toBe(col.l);
     expect(Math.hypot(lab.a, lab.b)).toBeCloseTo(col.c, 6);
+  });
+});
+
+describe('toCss (core)', () => {
+  it("throws for an hct color, pointing at 'nutelch/hct'", () => {
+    expect(() => toCss({ mode: 'hct', l: 50, c: 20, h: 30 })).toThrow(/nutelch\/hct/);
+  });
+});
+
+describe('LCHuv', () => {
+  it('lchuvSrgb is self-describing (mode lchuv, L on 0..100) and tracks culori', () => {
+    expect(lchuvSrgb.mode).toBe('lchuv');
+    expect(lchuvSrgb.lMax).toBe(100);
+    expect(lchuvP3.cmax).toBeGreaterThan(lchuvSrgb.cmax);
+    for (const [l, h] of [[50, 30], [70, 140], [35, 265], [90, 85]] as const) {
+      const truth = actualMax('lchuv', l, h, 'rgb', 260);
+      expect(Math.abs(cusp({ lut: lchuvSrgb, l, h }).c - truth) / lchuvSrgb.cmax).toBeLessThan(0.01);
+    }
+  });
+
+  it('toCss emits an lchuv color as the exact equivalent lch()', () => {
+    const toLch = converter('lch');
+    for (const [l, c, h] of [[50, 40, 30], [70, 60, 140], [35, 80, 265], [90, 20, 85], [5, 10, 200]] as const) {
+      const want = toLch({ mode: 'lchuv', l, c, h } as never) as { l: number; c: number; h: number };
+      const css = toCss({ mode: 'lchuv', l, c, h });
+      const [L, C, H] = css.slice(4, -1).split(' ').map((s) => parseFloat(s));
+      expect(L).toBeCloseTo(want.l, 1);
+      expect(C).toBeCloseTo(want.c, 1);
+      expect(Math.abs(((H! - want.h + 540) % 360) - 180)).toBeLessThan(0.02);
+    }
+  });
+
+  it('relch at relC 1 is in the sRGB gamut (via culori)', () => {
+    const inGamut = displayable;
+    for (const h of [0, 90, 180, 270]) {
+      const col = relch({ lut: lchuvSrgb, l: 60, relC: 0.99, h });
+      expect(inGamut({ mode: 'lchuv', l: col.l, c: col.c, h: col.h } as never)).toBe(true);
+    }
   });
 });
